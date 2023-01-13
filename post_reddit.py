@@ -1,7 +1,12 @@
+import json
+import os
+import sys
 from format_data import *
 from datetime import date
 from get_data import get_idph_data
 import time
+import praw
+from praw.util.token_manager import FileTokenManager
 
 
 # formats date to ISO 8601
@@ -97,30 +102,43 @@ if vaccine_data_available:
 # Generate the title and text based on current data.
 title = f"Unofficial Daily Update for {today_formatted}. "
 if infection_data_available:
-    title += f"{todays_data['cases']:,} New Cases."
+    title += f"{todays_data['cases']:,} New Cases "
+
+if infection_data_available:
+    title+="(Cases) "
+if tests_data_available:
+    title+="(Tests) "
+if hospitalization_data_available:
+    title+="(Hospitalizations) "
+if vaccine_data_available:
+    title+="(Vaccines) "
 
 selftext = ""
 
 if infection_data_available:
-    selftext += f"There were {todays_data['cases']:,} positive cases reported since {previous_infection_date}. \n\n"
-    selftext += f"There were {todays_data['deaths']:,} reported deaths since {previous_infection_date}.\n\n"
+    selftext += "##Cases \n  "
+    selftext += f"There were **{todays_data['cases']:,}** positive cases reported since **{previous_infection_date}**. \n\n"
+    selftext += f"There were **{todays_data['deaths']:,}** reported deaths since **{previous_infection_date}**.\n\n"
 
 if tests_data_available:
+    selftext += "##Tests \n  "
     selftext += f"With {todays_data['tested']:,} tests administered, we have a positivity rate of {positivity}%.\n\n"
 
 
 if hospitalization_data_available:
-    selftext +=  f"Since {previous_hospitalization_date}, there are {todays_data['covid_beds']:,} hospitalizations, with {todays_data['covid_icu']:,} in the ICU, and {todays_data['covid_vent']:,} ventilators in use.\n\n"
+    selftext += "##Hospitalizations \n  "
+    selftext +=  f"There are **{todays_data['covid_beds']:,}** hospitalizations, with **{todays_data['covid_icu']:,}** in the ICU, and **{todays_data['covid_vent']:,}** ventilators in use.\n\n"
 
 if vaccine_data_available:
-    selftext += f"**Please note that the vaccine data source has changed from the IDPH to the CDC.**  \n"
+    selftext += "##Vaccines \n  "
+    selftext += f"*Please note that the vaccine data source has changed from the IDPH to the CDC.*  \n"
     # selftext += f"{day_vaccines_administered_total:,} vaccine doses were administered since {previous_vaccine_date}, bringing the 7 day rolling average to {vaccine_average_total:,}.\n\n"
-    selftext += f"{day_vaccines_administered_total:,} vaccine doses were administered since {previous_vaccine_date}.\n\n"
-    selftext += f"{fully_vaccinated_total}% of the total Illinois population are fully vaccinated, with {first_dose_percent_total}% having received their first dose.  {booster_percent_total}% have recieved a booster. {todays_data['bivalent_booster_5plus']}% have recceived a bivalent booster. \n"
-    selftext += f"{fully_vaccinated_65plus}% of population age 65+ are fully vaccinated, with {first_dose_percent_65plus}% having received their first dose.  {booster_percent_65plus}% have recieved a booster.  \n"
-    selftext += f"{fully_vaccinated_18plus}% of population age 18+ are fully vaccinated, with {first_dose_percent_18plus}% having received their first dose.  {booster_percent_18plus}% have recieved a booster.  \n"
-    selftext += f"{fully_vaccinated_12plus}% of population age 12+ are fully vaccinated, with {first_dose_percent_12plus}% having received their first dose.  \n"
-    selftext += f"{fully_vaccinated_5plus}% of population age 5+ are fully vaccinated, with {first_dose_percent_5plus}% having received their first dose.  \n\n"
+    selftext += f"**{day_vaccines_administered_total:,}** vaccine doses were administered since **{previous_vaccine_date}**.\n\n"
+    selftext += f"**{fully_vaccinated_total}%** of the total Illinois population are fully vaccinated, with **{first_dose_percent_total}%** having received their first dose.  \n**{booster_percent_total}%** have recieved a booster.  \n**{todays_data['bivalent_booster_5plus']}%** have recceived a bivalent booster. \n\n"
+    selftext += f"**{fully_vaccinated_65plus}%** of population age 65+ are fully vaccinated, with **{first_dose_percent_65plus}%** having received their first dose.  **{booster_percent_65plus}%** have recieved a booster.  \n"
+    selftext += f"**{fully_vaccinated_18plus}%** of population age 18+ are fully vaccinated, with **{first_dose_percent_18plus}%** having received their first dose.  **{booster_percent_18plus}%** have recieved a booster.  \n"
+    selftext += f"**{fully_vaccinated_12plus}%** of population age 12+ are fully vaccinated, with **{first_dose_percent_12plus}%** having received their first dose.  \n"
+    selftext += f"**{fully_vaccinated_5plus}%** of population age 5+ are fully vaccinated, with **{first_dose_percent_5plus}%** having received their first dose.  \n\n"
 
 
 if False:
@@ -132,13 +150,12 @@ selftext += (
         "Source code is available at https://github.com/jsheputis/covid_il_bot")
 
 
-# print(title)
-# print("---------------------------------------------------------------------------------------------------------------------------")
+# print("##" + title + "\n\n  ")
+# print("\n\n---------------------------------------------------------------------------------------------------------------------------\n\n  ")
 # print(selftext)
 
 credentials_file = open(os.path.join(sys.path[0], "credentials.json"))
 credentials = json.load(credentials_file)
-
 refresh_token_filename = os.path.join(sys.path[0], "refresh_token.txt")
 
 refresh_token_manager = FileTokenManager(refresh_token_filename)

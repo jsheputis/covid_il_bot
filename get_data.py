@@ -1,6 +1,7 @@
 import requests
 from datetime import datetime, date, timedelta
 
+IGNORE_DATA_OLDER_THAN = '2022-10-01'
 
 # formats date to ISO 8601
 def format_date(date):
@@ -53,6 +54,9 @@ def get_idph_data(today=date.today()):
 
         normalized_date = import_date(day_date)
 
+        if normalized_date < IGNORE_DATA_OLDER_THAN or normalized_date > today_formatted:
+            continue
+
         # add day if it doesn't exist
         if normalized_date not in combined_data:
             combined_data[normalized_date] = dict()
@@ -67,6 +71,9 @@ def get_idph_data(today=date.today()):
         day_tested = 0
 
         normalized_date = import_date(day_date)
+
+        if normalized_date < IGNORE_DATA_OLDER_THAN or normalized_date > today_formatted:
+            continue
 
         # add day if it doesn't exist
         if normalized_date not in combined_data:
@@ -83,6 +90,9 @@ def get_idph_data(today=date.today()):
         
         # data delayed by one day, adjusting to match official reports
         normalized_date = import_date(day_date, add_day=True)
+
+        if normalized_date < IGNORE_DATA_OLDER_THAN or normalized_date > today_formatted:
+            continue
 
         # add day if it doesn't exist
         if normalized_date not in combined_data:
@@ -160,6 +170,9 @@ def get_idph_data(today=date.today()):
 
 
         normalized_date = import_date(day_date, add_day=True, cdc=True)
+
+        if normalized_date < IGNORE_DATA_OLDER_THAN or normalized_date > today_formatted:
+            continue
 
         # add day if it doesn't exist
         if normalized_date not in combined_data:
