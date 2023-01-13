@@ -5,3 +5,4 @@ __pycache__/
 refresh_token.txt
 get_refresh.py
 test_post.py
+personal/
