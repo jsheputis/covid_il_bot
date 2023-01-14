@@ -17,11 +17,16 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-p', '--print', action='store_true', default=False)
 parser.add_argument('--post-disabled', action='store_true', default=False)
 parser.add_argument('--test-post', action='store_true', default=False)
+parser.add_argument('--delay', action='store', type=int)
 args = parser.parse_args()
 
 PRINT_OUTPUT = args.print
 POST_ENABLED = not args.post_disabled
 TEST_POST = args.test_post
+
+if args.delay is not None and args.delay > 0:
+    print("Initial delay set for %d seconds" % args.delay)
+    time.sleep(args.delay)
 
 # formats date to ISO 8601
 def format_date(date):
