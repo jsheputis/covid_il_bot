@@ -25,9 +25,9 @@ def get_idph_data(today=date.today()):
     #today = date.today()
     today_formatted = format_date(today)
     
-    # data source for tests and deaths
-    # test_url = "https://idph.illinois.gov/DPHPublicInformation/api/COVIDExport/GetIllinoisCases"
+    # data source for tests and deaths, both seem to be updating on different schedules so pulling from both
     case_url = "https://idph.illinois.gov/DPHPublicInformation/api/COVID19/CasesDeaths/getCaseDeathChange"
+    case_url_2 = "https://idph.illinois.gov/DPHPublicInformation/api/COVIDExport/GetIllinoisCases"
 
     # data source for hospital, ICU, and ventilator utilization
     hospital_url = "https://idph.illinois.gov/DPHPublicInformation/api/COVID/GetHospitalizationResults"
@@ -37,6 +37,7 @@ def get_idph_data(today=date.today()):
 
     # grab all the data sources
     case_data = requests.get(case_url)
+    case_data_2 = requests.get(case_url_2)
     # print(test_data.json())
     hospital_data = requests.get(hospital_url)
     #vaccine_data = requests.get(vaccine_url)
@@ -50,7 +51,6 @@ def get_idph_data(today=date.today()):
         day_date = day['Report_Date']
         day_cases = day['CaseChange']
         day_deaths = day['DeathChange']
-        # day_tested = 0
 
         normalized_date = import_date(day_date)
 
@@ -63,9 +63,33 @@ def get_idph_data(today=date.today()):
 
         combined_data[normalized_date]['cases'] = day_cases
         combined_data[normalized_date]['deaths'] = day_deaths
-        # combined_data[normalized_date]['tested'] = day_tested
 
-    # get relevant info for tests
+    # Secondary source, currently not providing tests data but checking for it if it does show up
+    for day in case_data_2.json():
+        day_date = day['testDate']
+        day_cases = day['cases_change']
+        day_deaths = day['deaths_change']
+        day_tested = day['tested_change']
+
+        normalized_date = import_date(day_date)
+        
+        if normalized_date < IGNORE_DATA_OLDER_THAN or normalized_date > today_formatted:
+            continue
+
+        # add day if it doesn't exist
+        if normalized_date not in combined_data:
+            combined_data[normalized_date] = dict()
+
+        normalized_date = import_date(day_date)
+
+        if 'cases' not in combined_data[normalized_date]:
+            combined_data[normalized_date]['cases'] = day_cases
+        if 'deaths' not in combined_data[normalized_date]:
+            combined_data[normalized_date]['deaths'] = day_deaths
+        if day_tested and day_tested > 0 and 'tested' not in combined_data[normalized_date]:
+            combined_data[normalized_date]['tested'] = day_deaths
+
+    # get relevant info for tests if new source found
     # for day in case_data.json():
     for day in []:
         day_tested = 0
