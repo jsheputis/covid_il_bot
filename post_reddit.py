@@ -128,21 +128,21 @@ if vaccine_data_available:
 selftext = ""
 
 if infection_data_available:
-    selftext += "##Cases \n  "
+    selftext += "## Cases \n  "
     selftext += f"There were **{todays_data['cases']:,}** positive cases reported since **{previous_infection_date}**. \n\n"
     selftext += f"There were **{todays_data['deaths']:,}** reported deaths since **{previous_infection_date}**.\n\n"
 
 if tests_data_available:
-    selftext += "##Tests \n  "
+    selftext += "## Tests \n  "
     selftext += f"With {todays_data['tested']:,} tests administered, we have a positivity rate of {positivity}%.\n\n"
 
 
 if hospitalization_data_available:
-    selftext += "##Hospitalizations \n  "
+    selftext += "## Hospitalizations \n  "
     selftext +=  f"There are **{todays_data['covid_beds']:,}** hospitalizations, with **{todays_data['covid_icu']:,}** in the ICU, and **{todays_data['covid_vent']:,}** ventilators in use.\n\n"
 
 if vaccine_data_available:
-    selftext += "##Vaccines \n  "
+    selftext += "## Vaccines \n  "
     selftext += f"*Please note that the vaccine data source has changed from the IDPH to the CDC.*  \n"
     # selftext += f"{day_vaccines_administered_total:,} vaccine doses were administered since {previous_vaccine_date}, bringing the 7 day rolling average to {vaccine_average_total:,}.\n\n"
     selftext += f"**{day_vaccines_administered_total:,}** vaccine doses were administered since **{previous_vaccine_date}**.\n\n"
