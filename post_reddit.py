@@ -3,7 +3,7 @@ import json
 import os
 import sys
 from format_data import *
-from datetime import date
+from datetime import date, datetime
 from get_data import get_idph_data
 import time
 import praw
@@ -21,22 +21,31 @@ parser.add_argument('-p', '--print', action='store_true', default=False)
 parser.add_argument('--post-disabled', action='store_true', default=False)
 parser.add_argument('--test-post', action='store_true', default=False)
 parser.add_argument('--delay', action='store', type=int)
+parser.add_argument('--reference-date', action='store', type=lambda s: datetime.strptime(s, '%Y-%m-%d'))
 args = parser.parse_args()
 
 PRINT_OUTPUT = args.print
 POST_ENABLED = not args.post_disabled
 TEST_POST = args.test_post
+REFERENCE_DATE = args.reference_date
 
 if args.delay is not None and args.delay > 0:
     print("Initial delay set for %d seconds" % args.delay)
     time.sleep(args.delay)
+
+def get_reference_date():
+    if REFERENCE_DATE is not None:
+        return REFERENCE_DATE
+    
+    return date.today()
 
 # formats date to ISO 8601
 def format_date(date):
     return date.strftime("%Y-%m-%d")
 
 # Get today's date and format it how needed
-today = date.today()
+# TODO: Update var name from today for accuracy
+today = get_reference_date()
 today_formatted = format_date(today)
 
 combined_data = get_idph_data(today)
@@ -45,7 +54,7 @@ while today_formatted not in combined_data:
     print("Data not available yet, pausing 300 seconds.")
     time.sleep(300)
 
-    today = date.today()
+    today = get_reference_date()
     today_formatted = format_date(today)
 
 
