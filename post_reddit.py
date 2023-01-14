@@ -16,10 +16,12 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('-p', '--print', action='store_true', default=False)
 parser.add_argument('--post-disabled', action='store_true', default=False)
+parser.add_argument('--test-post', action='store_true', default=False)
 args = parser.parse_args()
 
 PRINT_OUTPUT = args.print
 POST_ENABLED = not args.post_disabled
+TEST_POST = args.test_post
 
 # formats date to ISO 8601
 def format_date(date):
@@ -182,5 +184,9 @@ if POST_ENABLED:
     )
 
     reddit.validate_on_submit = True
-    post = reddit.subreddit("coronavirusillinois").submit(title, selftext=selftext, flair_id="4be3f066-cf71-11eb-95ff-0e28526b1d53")
+
+    if TEST_POST:
+        post = reddit.subreddit("testingground4bots").submit(title, selftext=selftext)
+    else:
+        post = reddit.subreddit("coronavirusillinois").submit(title, selftext=selftext, flair_id="4be3f066-cf71-11eb-95ff-0e28526b1d53")
 
