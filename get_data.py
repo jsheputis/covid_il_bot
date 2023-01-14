@@ -19,7 +19,7 @@ def import_date(date, add_day=False, cdc=False):
     return formatted_date
 
 # Pulls all data from IDPH and combines them to a single dictionary using the date as the key
-def get_idph_data(today=date.today()):
+def get_idph_data(today):
 
     # Get today's date and format it how needed
     #today = date.today()
@@ -126,12 +126,6 @@ def get_idph_data(today=date.today()):
         combined_data[normalized_date]['covid_icu'] = day_covid_icu
         combined_data[normalized_date]['covid_beds'] = day_covid_beds
 
-    # Check to make sure that the data for today is available, otherwise try again in 5 minutes.
-    # if today_formatted not in combined_data:
-    #     print("Data not available yet, pausing 30 seconds.")
-    #     time.sleep(300)
-    #     combined_data = get_idph_data()
-
     # Ingest CDC data
     for day in cdc_vaccine_data.json():
         day_date = day['date']
@@ -223,23 +217,6 @@ def get_idph_data(today=date.today()):
         combined_data[normalized_date]['bivalent_booster_12plus'] = bivalent_booster_12plus       
         combined_data[normalized_date]['bivalent_booster_18plus'] = bivalent_booster_18plus       
         combined_data[normalized_date]['bivalent_booster_65plus'] = bivalent_booster_65plus       
-
-        
-    # Check to make sure each data source had data.  Saw conditions where we retrieve data as it's being updated and crash.
-    # if "cases" not in combined_data[today_formatted]:
-    #     print("IDPH case/test data not available yet, pausing 30 seconds.")
-    #     time.sleep(300)
-    #     combined_data = get_idph_data()
-        
-    # if "covid_vent" not in combined_data[today_formatted]:
-    #     print("IDPH hospitalization data not available yet, pausing 30 seconds.")
-    #     time.sleep(300)
-    #     combined_data = get_idph_data()
-        
-    # if "vaccines_administered_total" not in combined_data[today_formatted]:
-    #     print("CDC vaccine data not available yet, pausing 30 seconds.")
-    #     time.sleep(300)
-    #     combined_data = get_idph_data()
-
+    
     return combined_data
     

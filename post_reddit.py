@@ -2,12 +2,13 @@ import argparse
 import json
 import os
 import sys
+from traceback import print_exc
 from format_data import *
 from datetime import date, datetime
 from get_data import get_idph_data
 import time
 import praw
-from praw.util.token_manager import FileTokenManager
+# from praw.util.token_manager import FileTokenManager
 
 USERNAME_ENV_VAR_NAME = "PRAW_USERNAME"
 PASSWORD_ENV_VAR_NAME = "PRAW_PASSWORD"
@@ -172,10 +173,18 @@ if vaccine_data_available:
     selftext += f"**{fully_vaccinated_12plus}%** of population age 12+ are fully vaccinated, with **{first_dose_percent_12plus}%** having received their first dose.  \n"
     selftext += f"**{fully_vaccinated_5plus}%** of population age 5+ are fully vaccinated, with **{first_dose_percent_5plus}%** having received their first dose.  \n\n"
 
-
-if False:
-    selftext += (f"{weekly_reference(combined_data, reference_date=today)}\n\n"
-    f"{week_comparison(combined_data, reference_date=today)}\n\n")
+# TODO: Wrapping with exception handling as is work in progress, any unknown failure scenario will just surpress weekly reference/comparison data
+try:
+    selftext += f"{weekly_reference(combined_data, reference_date=today, infection_data_available=infection_data_available, tests_data_available=tests_data_available, hospitalization_data_available=hospitalization_data_available, vaccine_data_available=vaccine_data_available)}\n\n"
+except Exception as e:
+    print("Error in weekly reference report [{}]".format(e))
+    print_exc()
+try:
+    # selftext += f"{week_comparison(combined_data, reference_date=today)}\n\n"
+    test = 'test'
+except Exception as e:
+    print("Error in weekly comparison report[{}]".format(e))
+    print_exc()
 
 selftext += (
         "  \n\n ------------------ \n\n  "

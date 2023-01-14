@@ -7,40 +7,130 @@ def past_days(num_days, reference_date):
     old_date = reference_date - timedelta(num_days)
     return old_date
 
-def weekly_reference(combined_data, reference_date):
+def weekly_reference(
+    combined_data,
+    reference_date,
+    infection_data_available = False,
+    tests_data_available = False,
+    hospitalization_data_available = False,
+    vaccine_data_available = False
+):
     today_formatted = format_date(reference_date)
     seven_days_ago = format_date(past_days(7, reference_date))
     fourteen_days_ago = format_date(past_days(14, reference_date))
     twentyone_days_ago = format_date(past_days(21, reference_date))
     twentyeight_days_ago = format_date(past_days(28, reference_date))
 
-    cases_today = combined_data[today_formatted]['cases']
-    cases_seven_days_ago = combined_data[seven_days_ago]['cases']
-    cases_fourteen_days_ago = combined_data[fourteen_days_ago]['cases']
-    cases_twentyone_days_ago = combined_data[twentyone_days_ago]['cases']
-    cases_twentyeight_days_ago = combined_data[twentyeight_days_ago]['cases']
+    cases_today = None
+    cases_seven_days_ago = None
+    cases_fourteen_days_ago = None
+    cases_twentyone_days_ago = None
+    cases_twentyeight_days_ago = None
+
+    if infection_data_available:
+        cases_today = combined_data[today_formatted]['cases']
+        cases_seven_days_ago = combined_data[seven_days_ago]['cases'] if ('cases' in combined_data[seven_days_ago]) else None
+        cases_fourteen_days_ago = combined_data[fourteen_days_ago]['cases'] if 'cases' in combined_data[fourteen_days_ago] else None
+        cases_twentyone_days_ago = combined_data[twentyone_days_ago]['cases'] if 'cases' in combined_data[twentyone_days_ago] else None
+        cases_twentyeight_days_ago = combined_data[twentyeight_days_ago]['cases'] if 'cases' in combined_data[twentyeight_days_ago] else None
     
-    tests_today = combined_data[today_formatted]['tested']
-    tests_seven_days_ago = combined_data[seven_days_ago]['tested']
-    tests_fourteen_days_ago = combined_data[fourteen_days_ago]['tested']
-    tests_twentyone_days_ago = combined_data[twentyone_days_ago]['tested']
-    tests_twentyeight_days_ago = combined_data[twentyeight_days_ago]['tested']
+    tests_today = None
+    tests_seven_days_ago = None
+    tests_fourteen_days_ago = None
+    tests_twentyone_days_ago = None
+    tests_twentyeight_days_ago = None
+
+    if tests_data_available:
+        tests_today = combined_data[today_formatted]['tested'] if 'tested' in combined_data[today_formatted] else None
+        tests_seven_days_ago = combined_data[seven_days_ago]['tested'] if 'tested' in combined_data[seven_days_ago] else None
+        tests_fourteen_days_ago = combined_data[fourteen_days_ago]['tested'] if 'tested' in combined_data[fourteen_days_ago] else None
+        tests_twentyone_days_ago = combined_data[twentyone_days_ago]['tested'] if 'tested' in combined_data[twentyone_days_ago] else None
+        tests_twentyeight_days_ago = combined_data[twentyeight_days_ago]['tested'] if 'tested' in combined_data[twentyeight_days_ago] else None
     
-    positivity_today = round((cases_today / tests_today * 100), 2)
-    positivity_seven_days_ago = round((cases_seven_days_ago / tests_seven_days_ago * 100), 2)
-    positivity_fourteen_days_ago = round((cases_fourteen_days_ago / tests_fourteen_days_ago * 100), 2)
-    positivity_twentyone_days_ago = round((cases_twentyone_days_ago / tests_twentyone_days_ago * 100), 2)
-    positivity_twentyeight_days_ago = round((cases_twentyeight_days_ago / tests_twentyeight_days_ago * 100), 2)
+    positivity_today = None
+    positivity_seven_days_ago = None
+    positivity_fourteen_days_ago = None
+    positivity_twentyone_days_ago = None
+    positivity_twentyeight_days_ago = None
+    if False:
+        positivity_today = round((cases_today / tests_today * 100), 2)
+        positivity_seven_days_ago = round((cases_seven_days_ago / tests_seven_days_ago * 100), 2)
+        positivity_fourteen_days_ago = round((cases_fourteen_days_ago / tests_fourteen_days_ago * 100), 2)
+        positivity_twentyone_days_ago = round((cases_twentyone_days_ago / tests_twentyone_days_ago * 100), 2)
+        positivity_twentyeight_days_ago = round((cases_twentyeight_days_ago / tests_twentyeight_days_ago * 100), 2)
 
     ago_prior = "Ago" if (reference_date == date.today()) else "Prior"
-    reference_day_of_week = "Today" if (reference_date == date.today()) else reference_date.strftime('%A')
+    reference_day_of_week = "Today" if (reference_date == date.today()) else reference_date.strftime('%a %b %-d')
 
-    return (f"Week over week reference:  \n"
-    f"28 Days {ago_prior}: {cases_twentyeight_days_ago:,} Cases, {tests_twentyeight_days_ago:,} Tests, {positivity_twentyeight_days_ago}% Positivity  \n"
-    f"21 Days {ago_prior}: {cases_twentyone_days_ago:,} Cases, {tests_twentyone_days_ago:,} Tests, {positivity_twentyone_days_ago}% Positivity  \n"
-    f"14 Days {ago_prior}: {cases_fourteen_days_ago:,} Cases, {tests_fourteen_days_ago:,} Tests, {positivity_fourteen_days_ago}% Positivity  \n" 
-    f"7 Days {ago_prior}: {cases_seven_days_ago:,} Cases, {tests_seven_days_ago:,} Tests, {positivity_seven_days_ago}% Positivity  \n"
-    f"{reference_day_of_week}: {cases_today:,} Cases, {tests_today:,} Tests, {positivity_today}% Positivity  \n")
+    if infection_data_available or tests_data_available:
+        week_over_week_reference = f"Week over week reference:  \n"
+        if cases_twentyeight_days_ago is not None or tests_twentyeight_days_ago is not None:
+            reference_time_string = (f"28 Days {ago_prior}:").rjust(15, '@').replace('@', '&nbsp;')
+            week_over_week_reference +=  reference_time_string
+        if cases_twentyeight_days_ago is not None:
+            week_over_week_reference +=  f" **{cases_twentyeight_days_ago:,}** Cases."
+        if tests_twentyeight_days_ago is not None:
+            week_over_week_reference +=  f" **{tests_twentyeight_days_ago:,}** Tests."
+        if positivity_twentyeight_days_ago is not None:
+            week_over_week_reference +=  f" **{positivity_twentyeight_days_ago}%** Positivity."
+        if cases_twentyeight_days_ago is not None or tests_twentyeight_days_ago is not None:
+             week_over_week_reference +=  "  \n"
+        
+        if cases_twentyone_days_ago is not None or tests_twentyone_days_ago is not None:
+            reference_time_string = (f"21 Days {ago_prior}:").rjust(15, '@').replace('@', '&nbsp;')
+            week_over_week_reference +=  reference_time_string
+        if cases_twentyone_days_ago is not None:
+            week_over_week_reference +=  f" **{cases_twentyone_days_ago:,}** Cases."
+        if tests_twentyone_days_ago is not None:
+            week_over_week_reference +=  f" **{tests_twentyone_days_ago:,}** Tests."
+        if positivity_twentyone_days_ago is not None:
+            week_over_week_reference +=  f" **{positivity_twentyone_days_ago}%** Positivity."
+        if cases_twentyone_days_ago is not None or tests_twentyone_days_ago is not None:
+             week_over_week_reference +=  "  \n"
+
+        if cases_fourteen_days_ago is not None or tests_fourteen_days_ago is not None:
+            reference_time_string = (f"14 Days {ago_prior}:").rjust(15, '@').replace('@', '&nbsp;')
+            week_over_week_reference +=  reference_time_string
+        if cases_fourteen_days_ago is not None:
+            week_over_week_reference +=  f" **{cases_fourteen_days_ago:,}** Cases."
+        if tests_fourteen_days_ago is not None:
+            week_over_week_reference +=  f" **{tests_fourteen_days_ago:,}** Tests."
+        if positivity_fourteen_days_ago is not None:
+            week_over_week_reference +=  f" **{positivity_fourteen_days_ago}%** Positivity."
+        if cases_fourteen_days_ago is not None or tests_fourteen_days_ago is not None:
+             week_over_week_reference +=  "  \n"
+
+        if cases_seven_days_ago is not None or tests_seven_days_ago is not None:
+            reference_time_string = (f"7 Days {ago_prior}:").rjust(15, '@').replace('@', '&nbsp;')
+            week_over_week_reference +=  reference_time_string
+        if cases_seven_days_ago is not None:
+            week_over_week_reference +=  f" **{cases_seven_days_ago:,}** Cases."
+        if tests_seven_days_ago is not None:
+            week_over_week_reference +=  f" **{tests_seven_days_ago:,}** Tests."
+        if positivity_seven_days_ago is not None:
+            week_over_week_reference +=  f" **{positivity_seven_days_ago}%** Positivity."
+        if cases_seven_days_ago is not None or tests_seven_days_ago is not None:
+             week_over_week_reference +=  "  \n"
+
+        if cases_today is not None or tests_today is not None:
+            reference_time_string = (f"{reference_day_of_week}:").rjust(15, '@').replace('@', '&nbsp;')
+            week_over_week_reference +=  reference_time_string
+        if cases_today is not None:
+            week_over_week_reference +=  f" **{cases_today:,}** Cases."
+        if tests_today is not None:
+            week_over_week_reference +=  f" **{tests_today:,}** Tests."
+        if positivity_today is not None:
+            week_over_week_reference +=  f" **{positivity_today}%** Positivity."
+        if cases_today is not None or tests_today is not None:
+             week_over_week_reference +=  "  \n"
+
+
+
+
+        return week_over_week_reference
+    else:
+        return ""
+
 
 def weekly_average(combined_data, metric, reference_date):
     total = 0
