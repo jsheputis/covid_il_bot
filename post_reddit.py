@@ -120,6 +120,7 @@ if vaccine_data_available:
     booster_percent_65plus = todays_data['booster_percent_65plus']
     # vaccine_average_total = vaccine_average(combined_data, 'vaccines_administered_total')
 
+#TODO: Re-add weekend logic if data is not posted on weekend but populated during weekday... need to confirm
 
 # Generate the title and text based on current data.
 title = f"Unofficial Daily Update for {today_formatted}. "
