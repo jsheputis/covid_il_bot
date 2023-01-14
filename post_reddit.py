@@ -160,7 +160,7 @@ if False:
     f"{week_comparison(combined_data, reference_date=today)}\n\n")
 
 selftext += (
-        "\n\n ------------------ \n\n"
+        "  \n\n ------------------ \n\n  "
         "This post was automatically generated based on the latest data from the IDPH and CDC websites.  \n"
         "^(Source code is available at https://github.com/jsheputis/covid_il_bot)")
 
