@@ -9,6 +9,9 @@ import time
 import praw
 from praw.util.token_manager import FileTokenManager
 
+USERNAME_ENV_VAR_NAME = "PRAW_USERNAME"
+PASSWORD_ENV_VAR_NAME = "PRAW_PASSWORD"
+
 parser = argparse.ArgumentParser(
                     prog = 'CovidILBot',
                     description = 'Retrieves IDPH and CDC Data to post to /r/coronavirusillinois',
@@ -178,14 +181,22 @@ if PRINT_OUTPUT:
 if POST_ENABLED:
     credentials_file = open(os.path.join(sys.path[0], "credentials.json"))
     credentials = json.load(credentials_file)
-    refresh_token_filename = os.path.join(sys.path[0], "refresh_token.txt")
+    # refresh_token_filename = os.path.join(sys.path[0], "refresh_token.txt")
 
-    refresh_token_manager = FileTokenManager(refresh_token_filename)
+    # refresh_token_manager = FileTokenManager(refresh_token_filename)
+    # reddit = praw.Reddit(
+    #     token_manager = refresh_token_manager,
+    #     user_agent = "linux:com.jsheputis.covidilbot:v0.2 (by /u/compg318)",
+    #     client_id = credentials["praw_client_id"],
+    #     client_secret = credentials["praw_client_secret"]
+    # )
+
     reddit = praw.Reddit(
-        token_manager = refresh_token_manager,
         user_agent = "linux:com.jsheputis.covidilbot:v0.2 (by /u/compg318)",
         client_id = credentials["praw_client_id"],
-        client_secret = credentials["praw_client_secret"]
+        client_secret = credentials["praw_client_secret"],
+        username=os.getenv(USERNAME_ENV_VAR_NAME),
+        password=os.getenv(PASSWORD_ENV_VAR_NAME)
     )
 
     reddit.validate_on_submit = True
