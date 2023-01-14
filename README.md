@@ -15,3 +15,5 @@ credentials.json file.  A sample file is provided to show the format.
 
 Operating the bot is as simple as running post_reddit.py with Python3.6 or 
 higher.  All testing has been done on Python 3.9.2.
+
+Original Creator: [CoD-Segfault](https://github.com/CoD-Segfault)
