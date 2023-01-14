@@ -18,8 +18,6 @@ parser.add_argument('-p', '--print', action='store_true', default=False)
 parser.add_argument('--post-disabled', action='store_true', default=False)
 args = parser.parse_args()
 
-print(args)
-
 PRINT_OUTPUT = args.print
 POST_ENABLED = not args.post_disabled
 
