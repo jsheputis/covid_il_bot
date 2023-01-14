@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import sys
@@ -8,6 +9,17 @@ import time
 import praw
 from praw.util.token_manager import FileTokenManager
 
+parser = argparse.ArgumentParser(
+                    prog = 'CovidILBot',
+                    description = 'Retrieves IDPH and CDC Data to post to /r/coronavirusillinois',
+        )
+
+parser.add_argument('-p', '--print', action='store_true', default=False)
+parser.add_argument('--post-disabled', action='store_true', default=False)
+args = parser.parse_args()
+
+PRINT_OUTPUT = args.print
+POST_ENABLED = not args.post_disabled
 
 # formats date to ISO 8601
 def format_date(date):
@@ -150,22 +162,24 @@ selftext += (
         "Source code is available at https://github.com/jsheputis/covid_il_bot")
 
 
-# print("##" + title + "\n\n  ")
-# print("\n\n---------------------------------------------------------------------------------------------------------------------------\n\n  ")
-# print(selftext)
+if PRINT_OUTPUT:
+    print("##" + title + "\n\n  ")
+    print("\n\n---------------------------------------------------------------------------------------------------------------------------\n\n  ")
+    print(selftext)
 
-credentials_file = open(os.path.join(sys.path[0], "credentials.json"))
-credentials = json.load(credentials_file)
-refresh_token_filename = os.path.join(sys.path[0], "refresh_token.txt")
+if POST_ENABLED:
+    credentials_file = open(os.path.join(sys.path[0], "credentials.json"))
+    credentials = json.load(credentials_file)
+    refresh_token_filename = os.path.join(sys.path[0], "refresh_token.txt")
 
-refresh_token_manager = FileTokenManager(refresh_token_filename)
-reddit = praw.Reddit(
-    token_manager = refresh_token_manager,
-    user_agent = "linux:com.jsheputis.covidilbot:v0.2 (by /u/compg318)",
-    client_id = credentials["praw_client_id"],
-    client_secret = credentials["praw_client_secret"]
-)
+    refresh_token_manager = FileTokenManager(refresh_token_filename)
+    reddit = praw.Reddit(
+        token_manager = refresh_token_manager,
+        user_agent = "linux:com.jsheputis.covidilbot:v0.2 (by /u/compg318)",
+        client_id = credentials["praw_client_id"],
+        client_secret = credentials["praw_client_secret"]
+    )
 
-reddit.validate_on_submit = True
-post = reddit.subreddit("coronavirusillinois").submit(title, selftext=selftext, flair_id="4be3f066-cf71-11eb-95ff-0e28526b1d53")
+    reddit.validate_on_submit = True
+    post = reddit.subreddit("coronavirusillinois").submit(title, selftext=selftext, flair_id="4be3f066-cf71-11eb-95ff-0e28526b1d53")
 
