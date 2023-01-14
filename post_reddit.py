@@ -174,17 +174,22 @@ if vaccine_data_available:
     selftext += f"**{fully_vaccinated_5plus}%** of population age 5+ are fully vaccinated, with **{first_dose_percent_5plus}%** having received their first dose.  \n\n"
 
 # TODO: Wrapping with exception handling as is work in progress, any unknown failure scenario will just surpress weekly reference/comparison data
+
+weekly_reference_and_comparison = ""
 try:
-    selftext += f"{weekly_reference(combined_data, reference_date=today, infection_data_available=infection_data_available, tests_data_available=tests_data_available, hospitalization_data_available=hospitalization_data_available, vaccine_data_available=vaccine_data_available)}\n\n"
+    weekly_reference_and_comparison += f"{weekly_reference(combined_data, reference_date=today, infection_data_available=infection_data_available, tests_data_available=tests_data_available, hospitalization_data_available=hospitalization_data_available, vaccine_data_available=vaccine_data_available)}\n\n"
 except Exception as e:
     print("Error in weekly reference report [{}]".format(e))
     print_exc()
 try:
-    # selftext += f"{week_comparison(combined_data, reference_date=today)}\n\n"
-    test = 'test'
+    weekly_reference_and_comparison += f"{week_comparison(combined_data, reference_date=today)}\n\n"
 except Exception as e:
     print("Error in weekly comparison report[{}]".format(e))
     print_exc()
+
+if weekly_reference_and_comparison:
+    selftext += "## Weekly Reference and Comparison \n"
+    selftext += weekly_reference_and_comparison
 
 selftext += (
         "  \n\n ------------------ \n\n  "
