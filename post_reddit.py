@@ -8,6 +8,8 @@ from datetime import date, datetime
 from get_data import get_idph_data
 import time
 import praw
+from pandas.tseries.holiday import USFederalHolidayCalendar
+
 # from praw.util.token_manager import FileTokenManager
 
 USERNAME_ENV_VAR_NAME = "PRAW_USERNAME"
@@ -48,6 +50,10 @@ def format_date(date):
 # TODO: Update var name from today for accuracy
 today = get_reference_date()
 today_formatted = format_date(today)
+
+
+us_fedneral_holiday_calendar = USFederalHolidayCalendar()
+us_federal_holidays = us_fedneral_holiday_calendar.holidays(start=(today - timedelta(days=90)), end=today + timedelta(days=90)).to_pydatetime()
 
 combined_data = get_idph_data(today)
 
@@ -282,200 +288,135 @@ if weekly_reference_and_comparison:
     selftext += "### Weekly Reference and Comparison \n"
     selftext += weekly_reference_and_comparison
 
+# TODO: Handle scenario when previous_sunday and previous_saturday are the same values to avoid confusing messaging -- may not be an issue but need to see data output first
+# i.e. Sunday: XXXX since 2022-12-31
+#      Saturday: YYYY since 2022-12-31
+def get_prior_day_output_data(prior_day_date):
+    prior_day_date_formatted = format_date(prior_day_date)
+    prior_day_data = combined_data[prior_day_date_formatted] if prior_day_date_formatted in combined_data else None
+
+    if prior_day_data is None:
+        return ""
+    
+    # TODO: Cleanup unused vars after finalizing output, currently setting all data for ease of manipulating report output
+    prior_day_infection_data_available = 'cases' in prior_day_data
+    prior_day_hospitalization_data_available = 'covid_icu' in prior_day_data
+    prior_day_vaccine_data_available = 'vaccines_administered_total' in prior_day_data
+    prior_day_tests_data_available = 'tested' in prior_day_data
+
+    prior_day_previous_infection_date_and_data = get_previous_infection_date_and_date(prior_day_date)
+    prior_day_previous_infection_date = prior_day_previous_infection_date_and_data[0]
+    prior_day_previous_infection_data = prior_day_previous_infection_date_and_data[1]
+
+    prior_day_previous_hospitalization_date_and_data = get_previous_hospitalization_date_and_data(prior_day_date)
+    prior_day_previous_hospitalization_date = prior_day_previous_hospitalization_date_and_data[0]
+    prior_day_previous_hospitalization_data = prior_day_previous_hospitalization_date_and_data[1]
+
+    prior_day_previous_vaccine_date_and_data = get_previous_vaccine_date_and_data(prior_day_date)
+    prior_day_previous_vaccine_date = prior_day_previous_vaccine_date_and_data[0]
+    prior_day_previous_vaccine_data = prior_day_previous_vaccine_date_and_data[1]
+
+    prior_day_previous_tests_date_and_data = get_previous_tests_date_and_data(prior_day_date)
+    prior_day_previous_tests_date = prior_day_previous_tests_date_and_data[0]
+    prior_day_previous_tests_data = prior_day_previous_tests_date_and_data[1]
+
+    if prior_day_vaccine_data_available:
+        prior_day_day_vaccines_administered_total = doses_administered(combined_data, 'vaccines_administered_total', prior_day_date, prior_day_previous_vaccine_date)
+        prior_day_day_vaccines_administered_12plus = doses_administered(combined_data, 'vaccines_administered_12plus', prior_day_date, prior_day_previous_vaccine_date)
+        prior_day_day_vaccines_administered_18plus = doses_administered(combined_data, 'vaccines_administered_18plus', prior_day_date, prior_day_previous_vaccine_date)
+        prior_day_day_vaccines_administered_65plus = doses_administered(combined_data, 'vaccines_administered_65plus', prior_day_date, prior_day_previous_vaccine_date)
+        
+        prior_day_first_dose_percent_total = prior_day_data['vaccines_first_dose_percent_total']
+        prior_day_first_dose_percent_5plus = prior_day_data['vaccines_first_dose_percent_5plus']
+        prior_day_first_dose_percent_12plus = prior_day_data['vaccines_first_dose_percent_12plus']
+        prior_day_first_dose_percent_18plus = prior_day_data['vaccines_first_dose_percent_18plus']
+        prior_day_first_dose_percent_65plus = prior_day_data['vaccines_first_dose_percent_65plus']
+        prior_day_fully_vaccinated_total = prior_day_data['fully_vaccinated_percent_total']
+        prior_day_fully_vaccinated_5plus = prior_day_data['fully_vaccinated_percent_5plus']
+        prior_day_fully_vaccinated_12plus = prior_day_data['fully_vaccinated_percent_12plus']
+        prior_day_fully_vaccinated_18plus = prior_day_data['fully_vaccinated_percent_18plus']
+        prior_day_fully_vaccinated_65plus = prior_day_data['fully_vaccinated_percent_65plus']
+        prior_day_booster_percent_total = prior_day_data['booster_percent_total']
+        prior_day_booster_percent_18plus = prior_day_data['booster_percent_18plus']
+        prior_day_booster_percent_65plus = prior_day_data['booster_percent_65plus']
+
+    output = "  \n\n ------------------ \n\n"
+    output += f"## {prior_day_date.strftime('%A')} - {prior_day_date_formatted}  \n"
+    if prior_day_infection_data_available:
+        output += generate_infection_data_output(cases=prior_day_data['cases'], deaths=prior_day_data['deaths'], previous_data_date=prior_day_previous_infection_date)
+
+    if prior_day_tests_data_available:
+        output += generate_test_data_output(tested=prior_day_data['tested'], positivity_percentage=None)
+
+    if prior_day_hospitalization_data_available:
+        output += generate_hospitalization_data_output(covid_beds=prior_day_data['covid_beds'], covid_icu=prior_day_data['covid_icu'], covid_vent=prior_day_data['covid_vent'])
+
+    if prior_day_vaccine_data_available:
+        output += generate_vaccine_data_output(
+            day_vaccines_administered_total_count = prior_day_day_vaccines_administered_total,
+            fully_vaccinated_total_percentage = prior_day_fully_vaccinated_total,
+            first_dose_percent_total_percentage = prior_day_first_dose_percent_total,
+            booster_percent_total_percentage = prior_day_booster_percent_total,
+            bivalent_booster_5plus_percentage = prior_day_data['bivalent_booster_5plus'],
+            fully_vaccinated_65plus_percentage = prior_day_fully_vaccinated_65plus,
+            first_dose_percent_65plus_percentage = prior_day_first_dose_percent_65plus,
+            booster_percent_65plus_percentage = prior_day_booster_percent_65plus,
+            fully_vaccinated_18plus_percentage = prior_day_fully_vaccinated_18plus,
+            first_dose_percent_18plus_percentage = prior_day_first_dose_percent_18plus,
+            booster_percent_18plus_percentage = prior_day_booster_percent_18plus,
+            fully_vaccinated_12plus_percentage = prior_day_fully_vaccinated_12plus,
+            first_dose_percent_12plus_percentage = prior_day_first_dose_percent_12plus,
+            fully_vaccinated_5plus_percentage = prior_day_fully_vaccinated_5plus,
+            first_dose_percent_5plus_percentage = prior_day_first_dose_percent_5plus,
+            previous_data_date = prior_day_previous_vaccine_date
+        )
+
+    weekly_reference_and_comparison = ""
+    try:
+        weekly_reference_and_comparison += f"{weekly_reference(combined_data, reference_date=prior_day_date, infection_data_available=prior_day_infection_data_available, tests_data_available=prior_day_tests_data_available, hospitalization_data_available=prior_day_hospitalization_data_available, vaccine_data_available=prior_day_vaccine_data_available)}\n\n"
+    except Exception as e:
+        print("Error in weekly reference report [{}]".format(e))
+        print_exc()
+    try:
+        weekly_reference_and_comparison += f"{week_comparison(combined_data, reference_date=prior_day_date)}\n\n"
+    except Exception as e:
+        print("Error in weekly comparison report[{}]".format(e))
+        print_exc()
+
+    if weekly_reference_and_comparison:
+        output += "### Weekly Reference and Comparison \n"
+        output += weekly_reference_and_comparison
+
+
+    return output
 
 #TODO: Re-add weekend logic if data is not posted on weekend but populated during weekday... need to confirm
 processing_on_monday = True if today.weekday() == 0 else False
+previous_day_was_holiday = (today - timedelta(days=1)) in us_federal_holidays
+process_past_data_due_to_weekend_and_or_holiday = processing_on_monday or previous_day_was_holiday # TODO: Only handles when Monday is a holiday
 
-# TODO: Handle scenario when previous_sunday and previous_saturday are the same values to avoid confusing messaging
-# i.e. Sunday: XXXX since 2022-12-31
-#      Saturday: YYYY since 2022-12-31
-if False and processing_on_monday: # TODO: Enable after seeing data dump on Monday
-    sunday_date = today - timedelta(days=1)
-    sunday_date_formatted = format_date(sunday_date)
-    sunday_data = combined_data[sunday_date_formatted] if sunday_date_formatted in combined_data else None
+if False and process_past_data_due_to_weekend_and_or_holiday: # TODO: Enable after seeing data dump on Monday/Tuesday (great week to test with first Monday being a holiday...)
+    previous_days_to_process= []
+    if today.weekday() == 0: # Monday scenario
+        # Process Sunday and Saturday
+        previous_days_to_process.append(today - timedelta(days=1))
+        previous_days_to_process.append(today - timedelta(days=2))
+    elif previous_day_was_holiday:
+        # Get previous days up until a non-holiday weekday
+        found_non_holiday_weekday = False
+        check_date = (today - timedelta(days=1))
 
-    if sunday_data is not None:
-        sunday_infection_data_available = 'cases' in sunday_data
-        sunday_hospitalization_data_available = 'covid_icu' in sunday_data
-        sunday_vaccine_data_available = 'vaccines_administered_total' in sunday_data
-        sunday_tests_data_available = 'tested' in sunday_data
-
-        sunday_previous_infection_date_and_data = get_previous_infection_date_and_date(sunday_date)
-        sunday_previous_infection_date = sunday_previous_infection_date_and_data[0]
-        sunday_previous_infection_data = sunday_previous_infection_date_and_data[1]
-        
-        sunday_previous_hospitalization_date_and_data = get_previous_hospitalization_date_and_data(sunday_date)
-        sunday_previous_hospitalization_date = sunday_previous_hospitalization_date_and_data[0]
-        sunday_previous_hospitalization_data = sunday_previous_hospitalization_date_and_data[1]
-        
-        sunday_previous_vaccine_date_and_data = get_previous_vaccine_date_and_data(sunday_date)
-        sunday_previous_vaccine_date = sunday_previous_vaccine_date_and_data[0]
-        sunday_previous_vaccine_data = sunday_previous_vaccine_date_and_data[1]
-        
-        sunday_previous_tests_date_and_data = get_previous_tests_date_and_data(sunday_date)
-        sunday_previous_tests_date = sunday_previous_tests_date_and_data[0]
-        sunday_previous_tests_data = sunday_previous_tests_date_and_data[1]
-
-        if sunday_vaccine_data_available:
-            sunday_day_vaccines_administered_total = doses_administered(combined_data, 'vaccines_administered_total', sunday_date, sunday_previous_vaccine_date)
-            sunday_day_vaccines_administered_12plus = doses_administered(combined_data, 'vaccines_administered_12plus', sunday_date, sunday_previous_vaccine_date)
-            sunday_day_vaccines_administered_18plus = doses_administered(combined_data, 'vaccines_administered_18plus', sunday_date, sunday_previous_vaccine_date)
-            sunday_day_vaccines_administered_65plus = doses_administered(combined_data, 'vaccines_administered_65plus', sunday_date, sunday_previous_vaccine_date)
+        weekend_day_codes = [5, 6] # Saturday, Sunday
+        while not found_non_holiday_weekday:
+            if check_date.weekday() not in weekend_day_codes and check_date not in us_federal_holidays:
+                found_non_holiday_weekday = True
+            else:
+                previous_days_to_process.append(check_date)
             
-            sunday_first_dose_percent_total = sunday_data['vaccines_first_dose_percent_total']
-            sunday_first_dose_percent_5plus = sunday_data['vaccines_first_dose_percent_5plus']
-            sunday_first_dose_percent_12plus = sunday_data['vaccines_first_dose_percent_12plus']
-            sunday_first_dose_percent_18plus = sunday_data['vaccines_first_dose_percent_18plus']
-            sunday_first_dose_percent_65plus = sunday_data['vaccines_first_dose_percent_65plus']
-            sunday_fully_vaccinated_total = sunday_data['fully_vaccinated_percent_total']
-            sunday_fully_vaccinated_5plus = sunday_data['fully_vaccinated_percent_5plus']
-            sunday_fully_vaccinated_12plus = sunday_data['fully_vaccinated_percent_12plus']
-            sunday_fully_vaccinated_18plus = sunday_data['fully_vaccinated_percent_18plus']
-            sunday_fully_vaccinated_65plus = sunday_data['fully_vaccinated_percent_65plus']
-            sunday_booster_percent_total = sunday_data['booster_percent_total']
-            sunday_booster_percent_18plus = sunday_data['booster_percent_18plus']
-            sunday_booster_percent_65plus = sunday_data['booster_percent_65plus']
-        
-        
-        selftext += "  \n\n ------------------ \n\n"
-        selftext += f"## Sunday - {sunday_date_formatted}  \n"
-        if sunday_infection_data_available:
-            selftext += generate_infection_data_output(cases=sunday_data['cases'], deaths=sunday_data['deaths'], previous_data_date=sunday_previous_infection_date)
-
-        if sunday_tests_data_available:
-            selftext += generate_test_data_output(tested=sunday_data['tested'], positivity_percentage=None)
-
-        if sunday_hospitalization_data_available:
-            selftext += generate_hospitalization_data_output(covid_beds=sunday_data['covid_beds'], covid_icu=sunday_data['covid_icu'], covid_vent=sunday_data['covid_vent'])
-
-        if sunday_vaccine_data_available:
-            selftext += generate_vaccine_data_output(
-                day_vaccines_administered_total_count = sunday_day_vaccines_administered_total,
-                fully_vaccinated_total_percentage = sunday_fully_vaccinated_total,
-                first_dose_percent_total_percentage = sunday_first_dose_percent_total,
-                booster_percent_total_percentage = sunday_booster_percent_total,
-                bivalent_booster_5plus_percentage = sunday_data['bivalent_booster_5plus'],
-                fully_vaccinated_65plus_percentage = sunday_fully_vaccinated_65plus,
-                first_dose_percent_65plus_percentage = sunday_first_dose_percent_65plus,
-                booster_percent_65plus_percentage = sunday_booster_percent_65plus,
-                fully_vaccinated_18plus_percentage = sunday_fully_vaccinated_18plus,
-                first_dose_percent_18plus_percentage = sunday_first_dose_percent_18plus,
-                booster_percent_18plus_percentage = sunday_booster_percent_18plus,
-                fully_vaccinated_12plus_percentage = sunday_fully_vaccinated_12plus,
-                first_dose_percent_12plus_percentage = sunday_first_dose_percent_12plus,
-                fully_vaccinated_5plus_percentage = sunday_fully_vaccinated_5plus,
-                first_dose_percent_5plus_percentage = sunday_first_dose_percent_5plus,
-                previous_data_date = sunday_previous_vaccine_date
-            )
-        
-        weekly_reference_and_comparison = ""
-        try:
-            weekly_reference_and_comparison += f"{weekly_reference(combined_data, reference_date=sunday_date, infection_data_available=sunday_infection_data_available, tests_data_available=sunday_tests_data_available, hospitalization_data_available=sunday_hospitalization_data_available, vaccine_data_available=sunday_vaccine_data_available)}\n\n"
-        except Exception as e:
-            print("Error in weekly reference report [{}]".format(e))
-            print_exc()
-        try:
-            weekly_reference_and_comparison += f"{week_comparison(combined_data, reference_date=sunday_date)}\n\n"
-        except Exception as e:
-            print("Error in weekly comparison report[{}]".format(e))
-            print_exc()
-
-        if weekly_reference_and_comparison:
-            selftext += "### Weekly Reference and Comparison \n"
-            selftext += weekly_reference_and_comparison
-
-    saturday_date = today - timedelta(days=2)
-    saturday_date_formatted = format_date(saturday_date)
-    saturday_data = combined_data[saturday_date_formatted] if saturday_date_formatted in combined_data else None
-
-    if saturday_data is not None:
-        saturday_infection_data_available = 'cases' in saturday_data
-        saturday_hospitalization_data_available = 'covid_icu' in saturday_data
-        saturday_vaccine_data_available = 'vaccines_administered_total' in saturday_data
-        saturday_tests_data_available = 'tested' in saturday_data
-
-        saturday_previous_infection_date_and_data = get_previous_infection_date_and_date(saturday_date)
-        saturday_previous_infection_date = saturday_previous_infection_date_and_data[0]
-        saturday_previous_infection_data = saturday_previous_infection_date_and_data[1]
-        
-        saturday_previous_hospitalization_date_and_data = get_previous_hospitalization_date_and_data(saturday_date)
-        saturday_previous_hospitalization_date = saturday_previous_hospitalization_date_and_data[0]
-        saturday_previous_hospitalization_data = saturday_previous_hospitalization_date_and_data[1]
-        
-        saturday_previous_vaccine_date_and_data = get_previous_vaccine_date_and_data(saturday_date)
-        saturday_previous_vaccine_date = saturday_previous_vaccine_date_and_data[0]
-        saturday_previous_vaccine_data = saturday_previous_vaccine_date_and_data[1]
-        
-        saturday_previous_tests_date_and_data = get_previous_tests_date_and_data(saturday_date)
-        saturday_previous_tests_date = saturday_previous_tests_date_and_data[0]
-        saturday_previous_tests_data = saturday_previous_tests_date_and_data[1]
-        
-        if saturday_vaccine_data_available:
-            saturday_day_vaccines_administered_total = doses_administered(combined_data, 'vaccines_administered_total', saturday_date, saturday_previous_vaccine_date)
-            saturday_day_vaccines_administered_12plus = doses_administered(combined_data, 'vaccines_administered_12plus', saturday_date, saturday_previous_vaccine_date)
-            saturday_day_vaccines_administered_18plus = doses_administered(combined_data, 'vaccines_administered_18plus', saturday_date, saturday_previous_vaccine_date)
-            saturday_day_vaccines_administered_65plus = doses_administered(combined_data, 'vaccines_administered_65plus', saturday_date, saturday_previous_vaccine_date)
-            
-            saturday_first_dose_percent_total = saturday_data['vaccines_first_dose_percent_total']
-            saturday_first_dose_percent_5plus = saturday_data['vaccines_first_dose_percent_5plus']
-            saturday_first_dose_percent_12plus = saturday_data['vaccines_first_dose_percent_12plus']
-            saturday_first_dose_percent_18plus = saturday_data['vaccines_first_dose_percent_18plus']
-            saturday_first_dose_percent_65plus = saturday_data['vaccines_first_dose_percent_65plus']
-            saturday_fully_vaccinated_total = saturday_data['fully_vaccinated_percent_total']
-            saturday_fully_vaccinated_5plus = saturday_data['fully_vaccinated_percent_5plus']
-            saturday_fully_vaccinated_12plus = saturday_data['fully_vaccinated_percent_12plus']
-            saturday_fully_vaccinated_18plus = saturday_data['fully_vaccinated_percent_18plus']
-            saturday_fully_vaccinated_65plus = saturday_data['fully_vaccinated_percent_65plus']
-            saturday_booster_percent_total = saturday_data['booster_percent_total']
-            saturday_booster_percent_18plus = saturday_data['booster_percent_18plus']
-            saturday_booster_percent_65plus = saturday_data['booster_percent_65plus']
-            
-        selftext += "  \n\n ------------------ \n\n"
-        selftext += f"## Saturday - {saturday_date_formatted}  \n"
-        if saturday_infection_data_available:
-            selftext += generate_infection_data_output(cases=saturday_data['cases'], deaths=saturday_data['deaths'], previous_data_date=saturday_previous_infection_date)
-
-        if saturday_tests_data_available:
-            selftext += generate_test_data_output(tested=saturday_data['tested'], positivity_percentage=None)
-
-        if saturday_hospitalization_data_available:
-            selftext += generate_hospitalization_data_output(covid_beds=saturday_data['covid_beds'], covid_icu=saturday_data['covid_icu'], covid_vent=saturday_data['covid_vent'])
-
-        if saturday_vaccine_data_available:
-            selftext += generate_vaccine_data_output(
-                day_vaccines_administered_total_count = saturday_day_vaccines_administered_total,
-                fully_vaccinated_total_percentage = saturday_fully_vaccinated_total,
-                first_dose_percent_total_percentage = saturday_first_dose_percent_total,
-                booster_percent_total_percentage = saturday_booster_percent_total,
-                bivalent_booster_5plus_percentage = saturday_data['bivalent_booster_5plus'],
-                fully_vaccinated_65plus_percentage = saturday_fully_vaccinated_65plus,
-                first_dose_percent_65plus_percentage = saturday_first_dose_percent_65plus,
-                booster_percent_65plus_percentage = saturday_booster_percent_65plus,
-                fully_vaccinated_18plus_percentage = saturday_fully_vaccinated_18plus,
-                first_dose_percent_18plus_percentage = saturday_first_dose_percent_18plus,
-                booster_percent_18plus_percentage = saturday_booster_percent_18plus,
-                fully_vaccinated_12plus_percentage = saturday_fully_vaccinated_12plus,
-                first_dose_percent_12plus_percentage = saturday_first_dose_percent_12plus,
-                fully_vaccinated_5plus_percentage = saturday_fully_vaccinated_5plus,
-                first_dose_percent_5plus_percentage = saturday_first_dose_percent_5plus,
-                previous_data_date = saturday_previous_vaccine_date
-            )
-
-        weekly_reference_and_comparison = ""
-        try:
-            weekly_reference_and_comparison += f"{weekly_reference(combined_data, reference_date=saturday_date, infection_data_available=saturday_infection_data_available, tests_data_available=saturday_tests_data_available, hospitalization_data_available=saturday_hospitalization_data_available, vaccine_data_available=saturday_vaccine_data_available)}\n\n"
-        except Exception as e:
-            print("Error in weekly reference report [{}]".format(e))
-            print_exc()
-        try:
-            weekly_reference_and_comparison += f"{week_comparison(combined_data, reference_date=saturday_date)}\n\n"
-        except Exception as e:
-            print("Error in weekly comparison report[{}]".format(e))
-            print_exc()
-
-        if weekly_reference_and_comparison:
-            selftext += "### Weekly Reference and Comparison \n"
-            selftext += weekly_reference_and_comparison
+            check_date = check_date - timedelta(days=1)
+    
+    for previous_day_to_process in previous_days_to_process:
+        selftext += get_prior_day_output_data(previous_day_to_process)
 
 
 selftext += (
