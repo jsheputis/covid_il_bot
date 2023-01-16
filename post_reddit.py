@@ -395,7 +395,7 @@ processing_on_monday = True if today.weekday() == 0 else False
 previous_day_was_holiday = (today - timedelta(days=1)) in us_federal_holidays
 process_past_data_due_to_weekend_and_or_holiday = processing_on_monday or previous_day_was_holiday # TODO: Only handles when Monday is a holiday
 
-if False and process_past_data_due_to_weekend_and_or_holiday: # TODO: Enable after seeing data dump on Monday/Tuesday (great week to test with first Monday being a holiday...)
+if process_past_data_due_to_weekend_and_or_holiday: 
     previous_days_to_process= []
     if today.weekday() == 0: # Monday scenario
         # Process Sunday and Saturday
