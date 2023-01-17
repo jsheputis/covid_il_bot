@@ -93,10 +93,10 @@ def get_idph_data(today):
 
     # Third source, currently not providing tests data but checking for it if it does show up, seems same as data #2 but useful backup
     for day in case_data_3.json():
-        day_date = day['testDate']
-        day_cases = day['cases_change']
-        day_deaths = day['deaths_change']
-        day_tested = day['tested_change']
+        day_date = day['ReportDate']
+        day_cases = day['CasesChange']
+        day_deaths = day['DeathsChange']
+        day_tested = day['TotalTestedChange']
 
         normalized_date = import_date(day_date)
         
