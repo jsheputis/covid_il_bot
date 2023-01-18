@@ -4,11 +4,11 @@ import os
 import sys
 from traceback import print_exc
 from format_data import *
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from get_data import get_idph_data
 import time
 import praw
-from pandas.tseries.holiday import USFederalHolidayCalendar
+from dateutil import tz
 
 # from praw.util.token_manager import FileTokenManager
 
@@ -32,6 +32,8 @@ POST_ENABLED = not args.post_disabled
 TEST_POST = args.test_post
 REFERENCE_DATE = args.reference_date
 
+REDDIT_INSTANCE = None
+
 if args.delay is not None and args.delay > 0:
     print("Initial delay set for %d seconds" % args.delay)
     time.sleep(args.delay)
@@ -50,10 +52,6 @@ def format_date(date):
 # TODO: Update var name from today for accuracy
 today = get_reference_date()
 today_formatted = format_date(today)
-
-
-us_fedneral_holiday_calendar = USFederalHolidayCalendar()
-us_federal_holidays = us_fedneral_holiday_calendar.holidays(start=(today - timedelta(days=90)), end=today + timedelta(days=90)).to_pydatetime()
 
 combined_data = get_idph_data(today)
 
@@ -80,12 +78,11 @@ def get_previous_infection_date_and_date(reference_date):
 
     previous_infection_date = None
     previous_infection_data = None
-    if infection_data_available:
-        for date_key in combined_data_keys_sorted:
-            if date_key != date_formatted and date_key < date_formatted and 'cases' in combined_data[date_key]:
-                previous_infection_date = date_key
-                previous_infection_data = combined_data[date_key]
-                return [previous_infection_date, previous_infection_data]
+    for date_key in combined_data_keys_sorted:
+        if date_key != date_formatted and date_key < date_formatted and 'cases' in combined_data[date_key]:
+            previous_infection_date = date_key
+            previous_infection_data = combined_data[date_key]
+            return [previous_infection_date, previous_infection_data]
 
     return [None, None]
 
@@ -94,27 +91,23 @@ def get_previous_hospitalization_date_and_data(reference_date):
     
     previous_hospitalization_date = None
     previous_hospitalization_data = None
-    if hospitalization_data_available:
-        for date_key in combined_data_keys_sorted:
-            if date_key != date_formatted and date_key < date_formatted and 'covid_icu' in combined_data[date_key]:
-                previous_hospitalization_date = date_key
-                previous_hospitalization_data = combined_data[date_key]
-                
-                return [previous_hospitalization_date, previous_hospitalization_data]
+    for date_key in combined_data_keys_sorted:
+        if date_key != date_formatted and date_key < date_formatted and 'covid_icu' in combined_data[date_key]:
+            previous_hospitalization_date = date_key
+            previous_hospitalization_data = combined_data[date_key]
+            
+            return [previous_hospitalization_date, previous_hospitalization_data]
     return [None, None]
 
 def get_previous_vaccine_date_and_data(reference_date):
     date_formatted = format_date(reference_date)
-
     previous_vaccine_date = None
     previous_vaccine_data = None
-    if vaccine_data_available:
-        for date_key in combined_data_keys_sorted:
-            if date_key != date_formatted and date_key < date_formatted and 'vaccines_administered_total' in combined_data[date_key]:
-                previous_vaccine_date = date_key
-                previous_vaccine_data = combined_data[date_key]
-                
-                return [previous_vaccine_date, previous_vaccine_data]
+    for date_key in combined_data_keys_sorted:
+        if date_key != date_formatted and date_key < date_formatted and 'vaccines_administered_total' in combined_data[date_key]:
+            previous_vaccine_date = date_key
+            previous_vaccine_data = combined_data[date_key]
+            return [previous_vaccine_date, previous_vaccine_data]
     return [None, None]
 
 def get_previous_tests_date_and_data(reference_date):
@@ -390,33 +383,52 @@ def get_prior_day_output_data(prior_day_date):
 
     return output
 
-#TODO: Re-add weekend logic if data is not posted on weekend but populated during weekday... need to confirm
-processing_on_monday = True if today.weekday() == 0 else False
-previous_day_was_holiday = (today - timedelta(days=1)) in us_federal_holidays
-process_past_data_due_to_weekend_and_or_holiday = processing_on_monday or previous_day_was_holiday # TODO: Only handles when Monday is a holiday
-
-if process_past_data_due_to_weekend_and_or_holiday: 
-    previous_days_to_process= []
-    if today.weekday() == 0: # Monday scenario
-        # Process Sunday and Saturday
-        previous_days_to_process.append(today - timedelta(days=1))
-        previous_days_to_process.append(today - timedelta(days=2))
-    elif previous_day_was_holiday:
-        # Get previous days up until a non-holiday weekday
-        found_non_holiday_weekday = False
-        check_date = (today - timedelta(days=1))
-
-        weekend_day_codes = [5, 6] # Saturday, Sunday
-        while not found_non_holiday_weekday:
-            if check_date.weekday() not in weekend_day_codes and check_date not in us_federal_holidays:
-                found_non_holiday_weekday = True
-            else:
-                previous_days_to_process.append(check_date)
-            
-            check_date = check_date - timedelta(days=1)
+def get_reddit_instance():
+    global REDDIT_INSTANCE
+    if REDDIT_INSTANCE is not None:
+        return REDDIT_INSTANCE
     
-    for previous_day_to_process in previous_days_to_process:
-        selftext += get_prior_day_output_data(previous_day_to_process)
+    credentials_file = open(os.path.join(sys.path[0], "credentials.json"))
+    credentials = json.load(credentials_file)
+
+    REDDIT_INSTANCE = praw.Reddit(
+        user_agent = "linux:com.jsheputis.covidilbot:v0.2 (by /u/compg318)",
+        client_id = credentials["praw_client_id"],
+        client_secret = credentials["praw_client_secret"],
+        username=os.getenv(USERNAME_ENV_VAR_NAME),
+        password=os.getenv(PASSWORD_ENV_VAR_NAME)
+    )
+
+    return REDDIT_INSTANCE
+
+def get_last_post_date():
+    subreddit = 'testingground4bots' if TEST_POST else 'coronavirusillinois'
+    recent_submissions = get_reddit_instance().redditor(os.getenv(USERNAME_ENV_VAR_NAME)).submissions.new(limit=10)
+    last_post_date = None
+    for recent_submission in recent_submissions:
+        if (recent_submission.subreddit == subreddit):
+            if last_post_date is None or recent_submission.created_utc < last_post_date:
+                last_post_date = recent_submission.created_utc
+            
+    
+    last_post_date_utc = datetime.fromtimestamp(last_post_date, tz=timezone.utc)
+    return last_post_date_utc.astimezone(tz=tz.gettz('America/Chicago')).date()
+
+# Instead of handling weekend/holiday logic, let's just go backwards from our reference date until our most recent post date
+last_post_date = get_last_post_date()
+last_post_date = date(2022, 12, 15) # REMOVE EM
+last_post_date_formatted = format_date(last_post_date)
+
+previous_days_to_process = []
+processing_date = today - timedelta(days=1)
+processing_date = processing_date.date()
+while processing_date > last_post_date:
+    previous_days_to_process.append(processing_date)
+    processing_date = processing_date - timedelta(days=1)
+
+for previous_day_to_process in previous_days_to_process:
+    selftext += get_prior_day_output_data(previous_day_to_process)
+
 
 
 selftext += (
@@ -431,25 +443,7 @@ if PRINT_OUTPUT:
     print(selftext)
 
 if POST_ENABLED:
-    credentials_file = open(os.path.join(sys.path[0], "credentials.json"))
-    credentials = json.load(credentials_file)
-    # refresh_token_filename = os.path.join(sys.path[0], "refresh_token.txt")
-
-    # refresh_token_manager = FileTokenManager(refresh_token_filename)
-    # reddit = praw.Reddit(
-    #     token_manager = refresh_token_manager,
-    #     user_agent = "linux:com.jsheputis.covidilbot:v0.2 (by /u/compg318)",
-    #     client_id = credentials["praw_client_id"],
-    #     client_secret = credentials["praw_client_secret"]
-    # )
-
-    reddit = praw.Reddit(
-        user_agent = "linux:com.jsheputis.covidilbot:v0.2 (by /u/compg318)",
-        client_id = credentials["praw_client_id"],
-        client_secret = credentials["praw_client_secret"],
-        username=os.getenv(USERNAME_ENV_VAR_NAME),
-        password=os.getenv(PASSWORD_ENV_VAR_NAME)
-    )
+    reddit = get_reddit_instance()
 
     reddit.validate_on_submit = True
 
