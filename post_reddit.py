@@ -48,6 +48,24 @@ def get_reference_date():
 def format_date(date):
     return date.strftime("%Y-%m-%d")
 
+def get_reddit_instance():
+    global REDDIT_INSTANCE
+    if REDDIT_INSTANCE is not None:
+        return REDDIT_INSTANCE
+    
+    credentials_file = open(os.path.join(sys.path[0], "credentials.json"))
+    credentials = json.load(credentials_file)
+
+    REDDIT_INSTANCE = praw.Reddit(
+        user_agent = "linux:com.jsheputis.covidilbot:v0.2 (by /u/compg318)",
+        client_id = credentials["praw_client_id"],
+        client_secret = credentials["praw_client_secret"],
+        username=os.getenv(USERNAME_ENV_VAR_NAME),
+        password=os.getenv(PASSWORD_ENV_VAR_NAME)
+    )
+
+    return REDDIT_INSTANCE
+
 # Get today's date and format it how needed
 # TODO: Update var name from today for accuracy
 today = get_reference_date()
@@ -55,7 +73,33 @@ today_formatted = format_date(today)
 
 combined_data = get_idph_data(today)
 
-while today_formatted not in combined_data:
+
+def get_last_post_date():
+    subreddit = 'testingground4bots' if TEST_POST else 'coronavirusillinois'
+    # subreddit = 'coronavirusillinois'
+    recent_submissions = get_reddit_instance().redditor(os.getenv(USERNAME_ENV_VAR_NAME)).submissions.new(limit=10)
+    last_post_date = None
+    for recent_submission in recent_submissions:
+        if (recent_submission.subreddit == subreddit):
+            if last_post_date is None or recent_submission.created_utc > last_post_date:
+                last_post_date = recent_submission.created_utc
+            
+    
+    last_post_date_utc = datetime.fromtimestamp(last_post_date, tz=timezone.utc)
+
+    return last_post_date_utc.astimezone(tz=tz.gettz('America/Chicago')).date()
+
+# Instead of handling weekend/holiday logic, let's just go backwards from our reference date until our most recent post date
+last_post_date = get_last_post_date()
+last_post_date_formatted = format_date(last_post_date)
+
+previous_days_to_process = []
+processing_date = today - timedelta(days=1)
+while processing_date > last_post_date:
+    previous_days_to_process.append(processing_date)
+    processing_date = processing_date - timedelta(days=1)
+
+while today_formatted not in combined_data and len(previous_days_to_process) == 0:
     print("Data not available yet, pausing 300 seconds.")
     time.sleep(300)
 
@@ -64,12 +108,18 @@ while today_formatted not in combined_data:
 
 
 # Get the info from today.
-todays_data = combined_data[today_formatted]
+todays_data = combined_data[today_formatted] if today_formatted in combined_data else None
 
-infection_data_available = 'cases' in todays_data
-hospitalization_data_available = 'covid_icu' in todays_data
-vaccine_data_available = 'vaccines_administered_total' in todays_data
-tests_data_available = 'tested' in todays_data
+infection_data_available = False
+hospitalization_data_available = False
+vaccine_data_available = False
+tests_data_available = False
+
+if todays_data is not None:
+    infection_data_available = 'cases' in todays_data
+    hospitalization_data_available = 'covid_icu' in todays_data
+    vaccine_data_available = 'vaccines_administered_total' in todays_data
+    tests_data_available = 'tested' in todays_data
 
 combined_data_keys_sorted = sorted(combined_data.keys(), reverse=True)
 
@@ -383,48 +433,6 @@ def get_prior_day_output_data(prior_day_date):
 
     return output
 
-def get_reddit_instance():
-    global REDDIT_INSTANCE
-    if REDDIT_INSTANCE is not None:
-        return REDDIT_INSTANCE
-    
-    credentials_file = open(os.path.join(sys.path[0], "credentials.json"))
-    credentials = json.load(credentials_file)
-
-    REDDIT_INSTANCE = praw.Reddit(
-        user_agent = "linux:com.jsheputis.covidilbot:v0.2 (by /u/compg318)",
-        client_id = credentials["praw_client_id"],
-        client_secret = credentials["praw_client_secret"],
-        username=os.getenv(USERNAME_ENV_VAR_NAME),
-        password=os.getenv(PASSWORD_ENV_VAR_NAME)
-    )
-
-    return REDDIT_INSTANCE
-
-def get_last_post_date():
-    subreddit = 'testingground4bots' if TEST_POST else 'coronavirusillinois'
-    recent_submissions = get_reddit_instance().redditor(os.getenv(USERNAME_ENV_VAR_NAME)).submissions.new(limit=10)
-    last_post_date = None
-    for recent_submission in recent_submissions:
-        if (recent_submission.subreddit == subreddit):
-            if last_post_date is None or recent_submission.created_utc < last_post_date:
-                last_post_date = recent_submission.created_utc
-            
-    
-    last_post_date_utc = datetime.fromtimestamp(last_post_date, tz=timezone.utc)
-    return last_post_date_utc.astimezone(tz=tz.gettz('America/Chicago')).date()
-
-# Instead of handling weekend/holiday logic, let's just go backwards from our reference date until our most recent post date
-last_post_date = get_last_post_date()
-last_post_date = date(2022, 12, 15) # REMOVE EM
-last_post_date_formatted = format_date(last_post_date)
-
-previous_days_to_process = []
-processing_date = today - timedelta(days=1)
-processing_date = processing_date.date()
-while processing_date > last_post_date:
-    previous_days_to_process.append(processing_date)
-    processing_date = processing_date - timedelta(days=1)
 
 for previous_day_to_process in previous_days_to_process:
     selftext += get_prior_day_output_data(previous_day_to_process)
