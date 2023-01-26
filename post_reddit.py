@@ -344,8 +344,6 @@ if weekly_reference_output or weekly_comparison_output:
         selftext += "Comparison "
     selftext += "\n"
     selftext += weekly_reference_output
-    print(len(weekly_reference_output))
-    print(weekly_reference_output.isspace())
     selftext += weekly_comparison_output
 
 # TODO: Handle scenario when previous_sunday and previous_saturday are the same values to avoid confusing messaging -- may not be an issue but need to see data output first
@@ -433,14 +431,18 @@ def get_prior_day_output_data(prior_day_date):
 
     weekly_reference_output = ""
     try:
-        weekly_reference_output += f"{weekly_reference(combined_data, reference_date=prior_day_date, infection_data_available=prior_day_infection_data_available, tests_data_available=prior_day_tests_data_available, hospitalization_data_available=prior_day_hospitalization_data_available, vaccine_data_available=prior_day_vaccine_data_available)}\n\n"
+        weekly_reference_output += f"{weekly_reference(combined_data, reference_date=prior_day_date, infection_data_available=prior_day_infection_data_available, tests_data_available=prior_day_tests_data_available, hospitalization_data_available=prior_day_hospitalization_data_available, vaccine_data_available=prior_day_vaccine_data_available)}"
+        if weekly_reference_output:
+            weekly_reference_output += "\n\n"
     except Exception as e:
         print("Error in weekly reference report [{}]".format(e))
         print_exc()
     weekly_comparison_output = ""
     try:
-        # weekly_comparison_output += f"{week_comparison(combined_data, reference_date=prior_day_date)}\n\n"
+        # weekly_comparison_output += f"{week_comparison(combined_data, reference_date=prior_day_date)}"
         weekly_comparison_output = ""
+        if weekly_comparison_output:
+            weekly_comparison_output += "\n\n"
     except Exception as e:
         print("Error in weekly comparison report[{}]".format(e))
         print_exc()
