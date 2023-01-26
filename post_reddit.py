@@ -24,7 +24,7 @@ parser.add_argument('-p', '--print', action='store_true', default=False)
 parser.add_argument('--post-disabled', action='store_true', default=False)
 parser.add_argument('--test-post', action='store_true', default=False)
 parser.add_argument('--delay', action='store', type=int)
-parser.add_argument('--reference-date', action='store', type=lambda s: datetime.strptime(s, '%Y-%m-%d'))
+parser.add_argument('--reference-date', action='store', type=lambda s: datetime.strptime(s, '%Y-%m-%d').date())
 args = parser.parse_args()
 
 PRINT_OUTPUT = args.print
