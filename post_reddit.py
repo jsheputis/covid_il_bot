@@ -10,6 +10,7 @@ import time
 import praw
 from dateutil import tz
 
+
 # from praw.util.token_manager import FileTokenManager
 
 USERNAME_ENV_VAR_NAME = "PRAW_USERNAME"
@@ -569,6 +570,10 @@ def get_prior_day_output_data(prior_day_date):
 for previous_day_to_process in previous_days_to_process:
     selftext += get_prior_day_output_data(previous_day_to_process)
 
+if not selftext or selftext.isspace():
+    print('Unknown condition where data gets here but no data to display. Debugging----')
+    print('CombinedData [%s]' % json.dumps(combined_data))
+    print('previous_days_to_process [%s]' % json.dumps(previous_days_to_process))
 
 
 selftext += (
