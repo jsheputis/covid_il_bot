@@ -114,7 +114,6 @@ def get_last_infection_post_date():
     last_post_date = None
     for recent_submission in recent_submissions:
         if (recent_submission.subreddit == subreddit and '(Cases)' in recent_submission.title):
-            print(recent_submission.title)
             if last_post_date is None or recent_submission.created_utc > last_post_date:
                 last_post_date = recent_submission.created_utc
             
