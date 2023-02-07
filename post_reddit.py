@@ -89,6 +89,61 @@ def get_last_post_date():
 
     return last_post_date_utc.astimezone(tz=tz.gettz('America/Chicago')).date()
 
+
+def get_last_cases_post_date():
+    subreddit = 'testingground4bots' if TEST_POST else 'coronavirusillinois'
+    # subreddit = 'coronavirusillinois'
+    recent_submissions = get_reddit_instance().redditor(os.getenv(USERNAME_ENV_VAR_NAME)).submissions.new(limit=50)
+    last_post_date = None
+    for recent_submission in recent_submissions:
+        if (recent_submission.subreddit == subreddit and '(Cases)' in recent_submission.title):
+            print(recent_submission.title)
+            if last_post_date is None or recent_submission.created_utc > last_post_date:
+                last_post_date = recent_submission.created_utc
+            
+    if last_post_date is None:
+        return date(2023, 1, 1) # Harcoded default
+
+    last_post_date_utc = datetime.fromtimestamp(last_post_date, tz=timezone.utc)
+
+    return last_post_date_utc.astimezone(tz=tz.gettz('America/Chicago')).date()
+
+def get_last_infection_post_date():
+    subreddit = 'testingground4bots' if TEST_POST else 'coronavirusillinois'
+    # subreddit = 'coronavirusillinois'
+    recent_submissions = get_reddit_instance().redditor(os.getenv(USERNAME_ENV_VAR_NAME)).submissions.new(limit=50)
+    last_post_date = None
+    for recent_submission in recent_submissions:
+        if (recent_submission.subreddit == subreddit and '(Cases)' in recent_submission.title):
+            print(recent_submission.title)
+            if last_post_date is None or recent_submission.created_utc > last_post_date:
+                last_post_date = recent_submission.created_utc
+            
+    if last_post_date is None:
+        return date(2023, 1, 1) # Harcoded default
+
+    last_post_date_utc = datetime.fromtimestamp(last_post_date, tz=timezone.utc)
+
+    return last_post_date_utc.astimezone(tz=tz.gettz('America/Chicago')).date()
+
+def get_last_vaccine_post_date():
+    subreddit = 'testingground4bots' if TEST_POST else 'coronavirusillinois'
+    # subreddit = 'coronavirusillinois'
+    recent_submissions = get_reddit_instance().redditor(os.getenv(USERNAME_ENV_VAR_NAME)).submissions.new(limit=50)
+    last_post_date = None
+    for recent_submission in recent_submissions:
+        if (recent_submission.subreddit == subreddit and '(Vaccines)' in recent_submission.title):
+            print(recent_submission.title)
+            if last_post_date is None or recent_submission.created_utc > last_post_date:
+                last_post_date = recent_submission.created_utc
+            
+    if last_post_date is None:
+        return date(2023, 1, 1) # Harcoded default
+
+    last_post_date_utc = datetime.fromtimestamp(last_post_date, tz=timezone.utc)
+
+    return last_post_date_utc.astimezone(tz=tz.gettz('America/Chicago')).date()
+
 # Instead of handling weekend/holiday logic, let's just go backwards from our reference date until our most recent post date
 last_post_date = get_last_post_date()
 last_post_date_formatted = format_date(last_post_date)
@@ -111,31 +166,77 @@ while today_formatted not in combined_data and len(previous_days_to_process) == 
 # Get the info from today.
 todays_data = combined_data[today_formatted] if today_formatted in combined_data else None
 
+
 infection_data_available = False
 hospitalization_data_available = False
 vaccine_data_available = False
 tests_data_available = False
 
 if todays_data is not None:
-    infection_data_available = 'cases' in todays_data
+    # infection_data_available = 'cases' in todays_data
     hospitalization_data_available = 'covid_icu' in todays_data
-    vaccine_data_available = 'vaccines_administered_total' in todays_data
+    # vaccine_data_available = 'vaccines_administered_total' in todays_data
     tests_data_available = 'tested' in todays_data
 
 combined_data_keys_sorted = sorted(combined_data.keys(), reverse=True)
 
-def get_previous_infection_date_and_date(reference_date):
-    date_formatted = format_date(reference_date)
 
-    previous_infection_date = None
-    previous_infection_data = None
-    for date_key in combined_data_keys_sorted:
-        if date_key != date_formatted and date_key < date_formatted and 'cases' in combined_data[date_key]:
-            previous_infection_date = date_key
-            previous_infection_data = combined_data[date_key]
-            return [previous_infection_date, previous_infection_data]
+def get_case_date_on_or_prior_to(date_to_reference):
+    date_to_reference_formatted = format_date(date_to_reference)
 
-    return [None, None]
+    for day in combined_data_keys_sorted:
+        if 'cases' in combined_data[day] and (day == date_to_reference_formatted or day < date_to_reference_formatted):
+            return datetime.strptime(day, '%Y-%m-%d').date()
+    return None
+
+
+most_recent_infection_post_date = get_last_infection_post_date()
+most_recent_infection_post_date_formatted = format_date(most_recent_infection_post_date)
+
+most_recent_infection_data_date = get_case_date_on_or_prior_to(today)
+most_recent_infection_data_date_formatted = format_date(most_recent_infection_data_date)
+
+previous_post_infection_data_date = get_case_date_on_or_prior_to(most_recent_infection_data_date - timedelta(days=1))
+previous_post_infection_data_date_formatted = format_date(previous_post_infection_data_date)
+
+
+if most_recent_infection_data_date_formatted > most_recent_infection_post_date_formatted:
+    infection_data_available = True
+
+def get_vaccine_date_on_or_prior_to(date_to_reference):
+    date_to_reference_formatted = format_date(date_to_reference)
+
+    for day in combined_data_keys_sorted:
+        if 'vaccines_administered_total' in combined_data[day] and (day == date_to_reference_formatted or day < date_to_reference_formatted):
+            return datetime.strptime(day, '%Y-%m-%d').date()
+    return None
+
+
+most_recent_vaccine_post_date = get_last_vaccine_post_date()
+most_recent_vaccine_post_date_formatted = format_date(most_recent_vaccine_post_date)
+
+most_recent_vaccine_data_date = get_vaccine_date_on_or_prior_to(today)
+most_recent_vaccine_data_date_formatted = format_date(most_recent_vaccine_data_date)
+
+previous_post_vaccine_data_date = get_vaccine_date_on_or_prior_to(most_recent_vaccine_data_date - timedelta(days=1))
+previous_post_vaccine_data_date_formatted = format_date(previous_post_vaccine_data_date)
+
+if most_recent_vaccine_data_date_formatted > most_recent_vaccine_post_date_formatted:
+    vaccine_data_available = True
+
+
+# def get_previous_infection_date_and_date(reference_date):
+#     date_formatted = format_date(reference_date)
+
+#     previous_infection_date = None
+#     previous_infection_data = None
+#     for date_key in combined_data_keys_sorted:
+#         if date_key != date_formatted and date_key < date_formatted and 'cases' in combined_data[date_key]:
+#             previous_infection_date = date_key
+#             previous_infection_data = combined_data[date_key]
+#             return [previous_infection_date, previous_infection_data]
+
+#     return [None, None]
 
 def get_previous_hospitalization_date_and_data(reference_date):
     date_formatted = format_date(reference_date)
@@ -150,16 +251,16 @@ def get_previous_hospitalization_date_and_data(reference_date):
             return [previous_hospitalization_date, previous_hospitalization_data]
     return [None, None]
 
-def get_previous_vaccine_date_and_data(reference_date):
-    date_formatted = format_date(reference_date)
-    previous_vaccine_date = None
-    previous_vaccine_data = None
-    for date_key in combined_data_keys_sorted:
-        if date_key != date_formatted and date_key < date_formatted and 'vaccines_administered_total' in combined_data[date_key]:
-            previous_vaccine_date = date_key
-            previous_vaccine_data = combined_data[date_key]
-            return [previous_vaccine_date, previous_vaccine_data]
-    return [None, None]
+# def get_previous_vaccine_date_and_data(reference_date):
+#     date_formatted = format_date(reference_date)
+#     previous_vaccine_date = None
+#     previous_vaccine_data = None
+#     for date_key in combined_data_keys_sorted:
+#         if date_key != date_formatted and date_key < date_formatted and 'vaccines_administered_total' in combined_data[date_key]:
+#             previous_vaccine_date = date_key
+#             previous_vaccine_data = combined_data[date_key]
+#             return [previous_vaccine_date, previous_vaccine_data]
+#     return [None, None]
 
 def get_previous_tests_date_and_data(reference_date):
     date_formatted = format_date(reference_date)
@@ -175,17 +276,17 @@ def get_previous_tests_date_and_data(reference_date):
                 return [previous_tests_date, previous_tests_data]
     return [None, None]
 
-previous_infection_date_and_data = get_previous_infection_date_and_date(today)
-previous_infection_date = previous_infection_date_and_data[0]
-previous_infection_data = previous_infection_date_and_data[1]
+# previous_infection_date_and_data = get_previous_infection_date_and_date(today)
+# previous_infection_date = previous_infection_date_and_data[0]
+# previous_infection_data = previous_infection_date_and_data[1]
 
 previous_hospitalization_date_and_data = get_previous_hospitalization_date_and_data(today)
 previous_hospitalization_date = previous_hospitalization_date_and_data[0]
 previous_hospitalization_data = previous_hospitalization_date_and_data[1]
 
-previous_vaccine_date_and_data = get_previous_vaccine_date_and_data(today)
-previous_vaccine_date = previous_vaccine_date_and_data[0]
-previous_vaccine_data = previous_vaccine_date_and_data[1]
+# previous_vaccine_date_and_data = get_previous_vaccine_date_and_data(today)
+# previous_vaccine_date = previous_vaccine_date_and_data[0]
+# previous_vaccine_data = previous_vaccine_date_and_data[1]
 
 previous_tests_date_and_data = get_previous_tests_date_and_data(today)
 previous_tests_date = previous_tests_date_and_data[0]
@@ -197,30 +298,30 @@ positivity = 0
 
 
 if vaccine_data_available:
-    day_vaccines_administered_total = doses_administered(combined_data, 'vaccines_administered_total', today, previous_vaccine_date)
-    day_vaccines_administered_12plus = doses_administered(combined_data, 'vaccines_administered_12plus', today, previous_vaccine_date)
-    day_vaccines_administered_18plus = doses_administered(combined_data, 'vaccines_administered_18plus', today, previous_vaccine_date)
-    day_vaccines_administered_65plus = doses_administered(combined_data, 'vaccines_administered_65plus', today, previous_vaccine_date)
+    day_vaccines_administered_total = doses_administered(combined_data, 'vaccines_administered_total', most_recent_vaccine_data_date, previous_post_vaccine_data_date_formatted)
+    day_vaccines_administered_12plus = doses_administered(combined_data, 'vaccines_administered_12plus', most_recent_vaccine_data_date, previous_post_vaccine_data_date_formatted)
+    day_vaccines_administered_18plus = doses_administered(combined_data, 'vaccines_administered_18plus', most_recent_vaccine_data_date, previous_post_vaccine_data_date_formatted)
+    day_vaccines_administered_65plus = doses_administered(combined_data, 'vaccines_administered_65plus', most_recent_vaccine_data_date, previous_post_vaccine_data_date_formatted)
 
-    first_dose_percent_total = todays_data['vaccines_first_dose_percent_total']
-    first_dose_percent_5plus = todays_data['vaccines_first_dose_percent_5plus']
-    first_dose_percent_12plus = todays_data['vaccines_first_dose_percent_12plus']
-    first_dose_percent_18plus = todays_data['vaccines_first_dose_percent_18plus']
-    first_dose_percent_65plus = todays_data['vaccines_first_dose_percent_65plus']
-    fully_vaccinated_total = todays_data['fully_vaccinated_percent_total']
-    fully_vaccinated_5plus = todays_data['fully_vaccinated_percent_5plus']
-    fully_vaccinated_12plus = todays_data['fully_vaccinated_percent_12plus']
-    fully_vaccinated_18plus = todays_data['fully_vaccinated_percent_18plus']
-    fully_vaccinated_65plus = todays_data['fully_vaccinated_percent_65plus']
-    booster_percent_total = todays_data['booster_percent_total']
-    booster_percent_18plus = todays_data['booster_percent_18plus']
-    booster_percent_65plus = todays_data['booster_percent_65plus']
+    first_dose_percent_total = combined_data[most_recent_vaccine_data_date_formatted]['vaccines_first_dose_percent_total']
+    first_dose_percent_5plus = combined_data[most_recent_vaccine_data_date_formatted]['vaccines_first_dose_percent_5plus']
+    first_dose_percent_12plus = combined_data[most_recent_vaccine_data_date_formatted]['vaccines_first_dose_percent_12plus']
+    first_dose_percent_18plus = combined_data[most_recent_vaccine_data_date_formatted]['vaccines_first_dose_percent_18plus']
+    first_dose_percent_65plus = combined_data[most_recent_vaccine_data_date_formatted]['vaccines_first_dose_percent_65plus']
+    fully_vaccinated_total = combined_data[most_recent_vaccine_data_date_formatted]['fully_vaccinated_percent_total']
+    fully_vaccinated_5plus = combined_data[most_recent_vaccine_data_date_formatted]['fully_vaccinated_percent_5plus']
+    fully_vaccinated_12plus = combined_data[most_recent_vaccine_data_date_formatted]['fully_vaccinated_percent_12plus']
+    fully_vaccinated_18plus = combined_data[most_recent_vaccine_data_date_formatted]['fully_vaccinated_percent_18plus']
+    fully_vaccinated_65plus = combined_data[most_recent_vaccine_data_date_formatted]['fully_vaccinated_percent_65plus']
+    booster_percent_total = combined_data[most_recent_vaccine_data_date_formatted]['booster_percent_total']
+    booster_percent_18plus = combined_data[most_recent_vaccine_data_date_formatted]['booster_percent_18plus']
+    booster_percent_65plus = combined_data[most_recent_vaccine_data_date_formatted]['booster_percent_65plus']
     # vaccine_average_total = vaccine_average(combined_data, 'vaccines_administered_total')
 
 # Generate the title and text based on current data.
 title = f"Unofficial Daily Update for {today_formatted}. "
 if infection_data_available:
-    title += f"{todays_data['cases']:,} New Cases "
+    title += f"{combined_data[most_recent_infection_data_date_formatted]['cases']:,} New Cases "
 
 if infection_data_available:
     title+="(Cases) "
@@ -233,11 +334,11 @@ if vaccine_data_available:
 
 selftext = ""
 
-def generate_infection_data_output(cases, deaths, previous_data_date):
+def generate_infection_data_output(cases, deaths, report_date, previous_data_date):
     output = ""
     output += "### Cases \n"
-    output += f"There were **{cases:,}** positive cases reported since **{previous_data_date}**. \n\n"
-    output += f"There were **{deaths:,}** reported deaths since **{previous_data_date}**.\n\n"
+    output += f"As of **{report_date}**, there were **{cases:,}** positive cases reported since **{previous_data_date}**. \n\n"
+    output += f"As of **{report_date}**, there were **{deaths:,}** reported deaths since **{previous_data_date}**.\n\n"
 
     return output
 
@@ -286,7 +387,12 @@ def generate_vaccine_data_output(
     return output
 
 if infection_data_available:
-    selftext += generate_infection_data_output(cases=todays_data['cases'], deaths=todays_data['deaths'], previous_data_date=previous_infection_date)
+    selftext += generate_infection_data_output(
+        cases=combined_data[most_recent_infection_data_date_formatted]['cases'],
+        deaths=combined_data[most_recent_infection_data_date_formatted]['deaths'],
+        report_date=most_recent_infection_data_date_formatted,
+        previous_data_date=previous_post_infection_data_date_formatted
+    )
 
 if tests_data_available:
     selftext += generate_test_data_output(tested=todays_data['tested'], positivity_percentage=positivity)
@@ -300,7 +406,7 @@ if vaccine_data_available:
         fully_vaccinated_total_percentage = fully_vaccinated_total,
         first_dose_percent_total_percentage = first_dose_percent_total,
         booster_percent_total_percentage = booster_percent_total,
-        bivalent_booster_5plus_percentage = todays_data['bivalent_booster_5plus'],
+        bivalent_booster_5plus_percentage = combined_data[most_recent_vaccine_data_date_formatted]['bivalent_booster_5plus'],
         fully_vaccinated_65plus_percentage = fully_vaccinated_65plus,
         first_dose_percent_65plus_percentage = first_dose_percent_65plus,
         booster_percent_65plus_percentage = booster_percent_65plus,
@@ -311,28 +417,28 @@ if vaccine_data_available:
         first_dose_percent_12plus_percentage = first_dose_percent_12plus,
         fully_vaccinated_5plus_percentage = fully_vaccinated_5plus,
         first_dose_percent_5plus_percentage = first_dose_percent_5plus,
-        previous_data_date = previous_vaccine_date
+        previous_data_date = previous_post_vaccine_data_date_formatted
     )
 
 
 # TODO: Wrapping with exception handling as is work in progress, any unknown failure scenario will just surpress weekly reference/comparison data
 weekly_reference_output = ""
-try:
-    weekly_reference_output += f"{weekly_reference(combined_data, reference_date=today, infection_data_available=infection_data_available, tests_data_available=tests_data_available, hospitalization_data_available=hospitalization_data_available, vaccine_data_available=vaccine_data_available)}"
-    if weekly_reference_output:
-        weekly_reference_output += "\n\n"
-except Exception as e:
-    print("Error in weekly reference report [{}]".format(e))
-    print_exc()
+# try:
+#     weekly_reference_output += f"{weekly_reference(combined_data, reference_date=today, infection_data_available=infection_data_available, tests_data_available=tests_data_available, hospitalization_data_available=hospitalization_data_available, vaccine_data_available=vaccine_data_available)}"
+#     if weekly_reference_output:
+#         weekly_reference_output += "\n\n"
+# except Exception as e:
+#     print("Error in weekly reference report [{}]".format(e))
+#     print_exc()
 weekly_comparison_output = ""
-try:
-    weekly_comparison_output = ""
-    #weekly_comparison_output += f"{week_comparison(combined_data, reference_date=today)}"
-    if weekly_comparison_output:
-        weekly_comparison_output += "\n\n"
-except Exception as e:
-    print("Error in weekly comparison report[{}]".format(e))
-    print_exc()
+# try:
+#     weekly_comparison_output = ""
+#     #weekly_comparison_output += f"{week_comparison(combined_data, reference_date=today)}"
+#     if weekly_comparison_output:
+#         weekly_comparison_output += "\n\n"
+# except Exception as e:
+#     print("Error in weekly comparison report[{}]".format(e))
+#     print_exc()
 
 if weekly_reference_output or weekly_comparison_output:
     selftext += "### Weekly "
@@ -357,51 +463,51 @@ def get_prior_day_output_data(prior_day_date):
         return ""
     
     # TODO: Cleanup unused vars after finalizing output, currently setting all data for ease of manipulating report output
-    prior_day_infection_data_available = 'cases' in prior_day_data
+    # prior_day_infection_data_available = 'cases' in prior_day_data
     prior_day_hospitalization_data_available = 'covid_icu' in prior_day_data
-    prior_day_vaccine_data_available = 'vaccines_administered_total' in prior_day_data
+    # prior_day_vaccine_data_available = 'vaccines_administered_total' in prior_day_data
     prior_day_tests_data_available = 'tested' in prior_day_data
 
-    prior_day_previous_infection_date_and_data = get_previous_infection_date_and_date(prior_day_date)
-    prior_day_previous_infection_date = prior_day_previous_infection_date_and_data[0]
-    prior_day_previous_infection_data = prior_day_previous_infection_date_and_data[1]
+    # prior_day_previous_infection_date_and_data = get_previous_infection_date_and_date(prior_day_date)
+    # prior_day_previous_infection_date = prior_day_previous_infection_date_and_data[0]
+    # prior_day_previous_infection_data = prior_day_previous_infection_date_and_data[1]
 
     prior_day_previous_hospitalization_date_and_data = get_previous_hospitalization_date_and_data(prior_day_date)
     prior_day_previous_hospitalization_date = prior_day_previous_hospitalization_date_and_data[0]
     prior_day_previous_hospitalization_data = prior_day_previous_hospitalization_date_and_data[1]
 
-    prior_day_previous_vaccine_date_and_data = get_previous_vaccine_date_and_data(prior_day_date)
-    prior_day_previous_vaccine_date = prior_day_previous_vaccine_date_and_data[0]
-    prior_day_previous_vaccine_data = prior_day_previous_vaccine_date_and_data[1]
+    # prior_day_previous_vaccine_date_and_data = get_previous_vaccine_date_and_data(prior_day_date)
+    # prior_day_previous_vaccine_date = prior_day_previous_vaccine_date_and_data[0]
+    # prior_day_previous_vaccine_data = prior_day_previous_vaccine_date_and_data[1]
 
     prior_day_previous_tests_date_and_data = get_previous_tests_date_and_data(prior_day_date)
     prior_day_previous_tests_date = prior_day_previous_tests_date_and_data[0]
     prior_day_previous_tests_data = prior_day_previous_tests_date_and_data[1]
 
-    if prior_day_vaccine_data_available:
-        prior_day_day_vaccines_administered_total = doses_administered(combined_data, 'vaccines_administered_total', prior_day_date, prior_day_previous_vaccine_date)
-        prior_day_day_vaccines_administered_12plus = doses_administered(combined_data, 'vaccines_administered_12plus', prior_day_date, prior_day_previous_vaccine_date)
-        prior_day_day_vaccines_administered_18plus = doses_administered(combined_data, 'vaccines_administered_18plus', prior_day_date, prior_day_previous_vaccine_date)
-        prior_day_day_vaccines_administered_65plus = doses_administered(combined_data, 'vaccines_administered_65plus', prior_day_date, prior_day_previous_vaccine_date)
+    # if prior_day_vaccine_data_available:
+    #     prior_day_day_vaccines_administered_total = doses_administered(combined_data, 'vaccines_administered_total', prior_day_date, prior_day_previous_vaccine_date)
+    #     prior_day_day_vaccines_administered_12plus = doses_administered(combined_data, 'vaccines_administered_12plus', prior_day_date, prior_day_previous_vaccine_date)
+    #     prior_day_day_vaccines_administered_18plus = doses_administered(combined_data, 'vaccines_administered_18plus', prior_day_date, prior_day_previous_vaccine_date)
+    #     prior_day_day_vaccines_administered_65plus = doses_administered(combined_data, 'vaccines_administered_65plus', prior_day_date, prior_day_previous_vaccine_date)
         
-        prior_day_first_dose_percent_total = prior_day_data['vaccines_first_dose_percent_total']
-        prior_day_first_dose_percent_5plus = prior_day_data['vaccines_first_dose_percent_5plus']
-        prior_day_first_dose_percent_12plus = prior_day_data['vaccines_first_dose_percent_12plus']
-        prior_day_first_dose_percent_18plus = prior_day_data['vaccines_first_dose_percent_18plus']
-        prior_day_first_dose_percent_65plus = prior_day_data['vaccines_first_dose_percent_65plus']
-        prior_day_fully_vaccinated_total = prior_day_data['fully_vaccinated_percent_total']
-        prior_day_fully_vaccinated_5plus = prior_day_data['fully_vaccinated_percent_5plus']
-        prior_day_fully_vaccinated_12plus = prior_day_data['fully_vaccinated_percent_12plus']
-        prior_day_fully_vaccinated_18plus = prior_day_data['fully_vaccinated_percent_18plus']
-        prior_day_fully_vaccinated_65plus = prior_day_data['fully_vaccinated_percent_65plus']
-        prior_day_booster_percent_total = prior_day_data['booster_percent_total']
-        prior_day_booster_percent_18plus = prior_day_data['booster_percent_18plus']
-        prior_day_booster_percent_65plus = prior_day_data['booster_percent_65plus']
+    #     prior_day_first_dose_percent_total = prior_day_data['vaccines_first_dose_percent_total']
+    #     prior_day_first_dose_percent_5plus = prior_day_data['vaccines_first_dose_percent_5plus']
+    #     prior_day_first_dose_percent_12plus = prior_day_data['vaccines_first_dose_percent_12plus']
+    #     prior_day_first_dose_percent_18plus = prior_day_data['vaccines_first_dose_percent_18plus']
+    #     prior_day_first_dose_percent_65plus = prior_day_data['vaccines_first_dose_percent_65plus']
+    #     prior_day_fully_vaccinated_total = prior_day_data['fully_vaccinated_percent_total']
+    #     prior_day_fully_vaccinated_5plus = prior_day_data['fully_vaccinated_percent_5plus']
+    #     prior_day_fully_vaccinated_12plus = prior_day_data['fully_vaccinated_percent_12plus']
+    #     prior_day_fully_vaccinated_18plus = prior_day_data['fully_vaccinated_percent_18plus']
+    #     prior_day_fully_vaccinated_65plus = prior_day_data['fully_vaccinated_percent_65plus']
+    #     prior_day_booster_percent_total = prior_day_data['booster_percent_total']
+    #     prior_day_booster_percent_18plus = prior_day_data['booster_percent_18plus']
+    #     prior_day_booster_percent_65plus = prior_day_data['booster_percent_65plus']
 
     output = "  \n\n ------------------ \n\n"
     output += f"## {prior_day_date.strftime('%A')} - {prior_day_date_formatted}  \n"
-    if prior_day_infection_data_available:
-        output += generate_infection_data_output(cases=prior_day_data['cases'], deaths=prior_day_data['deaths'], previous_data_date=prior_day_previous_infection_date)
+    # if prior_day_infection_data_available:
+    #     output += generate_infection_data_output(cases=prior_day_data['cases'], deaths=prior_day_data['deaths'], previous_data_date=prior_day_previous_infection_date)
 
     if prior_day_tests_data_available:
         output += generate_test_data_output(tested=prior_day_data['tested'], positivity_percentage=None)
@@ -409,29 +515,29 @@ def get_prior_day_output_data(prior_day_date):
     if prior_day_hospitalization_data_available:
         output += generate_hospitalization_data_output(covid_beds=prior_day_data['covid_beds'], covid_icu=prior_day_data['covid_icu'], covid_vent=prior_day_data['covid_vent'])
 
-    if prior_day_vaccine_data_available:
-        output += generate_vaccine_data_output(
-            day_vaccines_administered_total_count = prior_day_day_vaccines_administered_total,
-            fully_vaccinated_total_percentage = prior_day_fully_vaccinated_total,
-            first_dose_percent_total_percentage = prior_day_first_dose_percent_total,
-            booster_percent_total_percentage = prior_day_booster_percent_total,
-            bivalent_booster_5plus_percentage = prior_day_data['bivalent_booster_5plus'],
-            fully_vaccinated_65plus_percentage = prior_day_fully_vaccinated_65plus,
-            first_dose_percent_65plus_percentage = prior_day_first_dose_percent_65plus,
-            booster_percent_65plus_percentage = prior_day_booster_percent_65plus,
-            fully_vaccinated_18plus_percentage = prior_day_fully_vaccinated_18plus,
-            first_dose_percent_18plus_percentage = prior_day_first_dose_percent_18plus,
-            booster_percent_18plus_percentage = prior_day_booster_percent_18plus,
-            fully_vaccinated_12plus_percentage = prior_day_fully_vaccinated_12plus,
-            first_dose_percent_12plus_percentage = prior_day_first_dose_percent_12plus,
-            fully_vaccinated_5plus_percentage = prior_day_fully_vaccinated_5plus,
-            first_dose_percent_5plus_percentage = prior_day_first_dose_percent_5plus,
-            previous_data_date = prior_day_previous_vaccine_date
-        )
+    # if prior_day_vaccine_data_available:
+    #     output += generate_vaccine_data_output(
+    #         day_vaccines_administered_total_count = prior_day_day_vaccines_administered_total,
+    #         fully_vaccinated_total_percentage = prior_day_fully_vaccinated_total,
+    #         first_dose_percent_total_percentage = prior_day_first_dose_percent_total,
+    #         booster_percent_total_percentage = prior_day_booster_percent_total,
+    #         bivalent_booster_5plus_percentage = prior_day_data['bivalent_booster_5plus'],
+    #         fully_vaccinated_65plus_percentage = prior_day_fully_vaccinated_65plus,
+    #         first_dose_percent_65plus_percentage = prior_day_first_dose_percent_65plus,
+    #         booster_percent_65plus_percentage = prior_day_booster_percent_65plus,
+    #         fully_vaccinated_18plus_percentage = prior_day_fully_vaccinated_18plus,
+    #         first_dose_percent_18plus_percentage = prior_day_first_dose_percent_18plus,
+    #         booster_percent_18plus_percentage = prior_day_booster_percent_18plus,
+    #         fully_vaccinated_12plus_percentage = prior_day_fully_vaccinated_12plus,
+    #         first_dose_percent_12plus_percentage = prior_day_first_dose_percent_12plus,
+    #         fully_vaccinated_5plus_percentage = prior_day_fully_vaccinated_5plus,
+    #         first_dose_percent_5plus_percentage = prior_day_first_dose_percent_5plus,
+    #         previous_data_date = prior_day_previous_vaccine_date
+    #     )
 
     weekly_reference_output = ""
     try:
-        weekly_reference_output += f"{weekly_reference(combined_data, reference_date=prior_day_date, infection_data_available=prior_day_infection_data_available, tests_data_available=prior_day_tests_data_available, hospitalization_data_available=prior_day_hospitalization_data_available, vaccine_data_available=prior_day_vaccine_data_available)}"
+        weekly_reference_output += f"{weekly_reference(combined_data, reference_date=prior_day_date, infection_data_available=False, tests_data_available=prior_day_tests_data_available, hospitalization_data_available=prior_day_hospitalization_data_available, vaccine_data_available=False)}"
         if weekly_reference_output:
             weekly_reference_output += "\n\n"
     except Exception as e:
