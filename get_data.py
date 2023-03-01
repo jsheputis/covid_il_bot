@@ -167,14 +167,14 @@ def get_idph_data(today):
         #if 'additional_doses_65plus' in day.keys():
         #    day_vaccines_administered_65plus += int(day['additional_doses_65plus'])
         first_dose_percent_total = day['administered_dose1_pop_pct']
-        first_dose_percent_12plus = day['administered_dose1_recip_2']
+        first_dose_percent_12plus = day['administered_dose1_recip_12plus']
         if 'administered_dose1_recip_5pluspop_pct' in day.keys():
             first_dose_percent_5plus = day['administered_dose1_recip_5pluspop_pct']
         else:
             first_dose_percent_5plus = 0
             
-        first_dose_percent_18plus = day['administered_dose1_recip_4']
-        first_dose_percent_65plus = day['administered_dose1_recip_6']
+        first_dose_percent_18plus = day['administered_dose1_recip_18plus']
+        first_dose_percent_65plus = day['administered_dose1_recip_65plus']
         fully_vaccinated_total = day['series_complete_pop_pct']
         if 'series_complete_5pluspop_pct' in day.keys():
             fully_vaccinated_5plus = day['series_complete_5pluspop_pct']
