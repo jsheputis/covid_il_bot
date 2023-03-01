@@ -355,6 +355,7 @@ def generate_hospitalization_data_output(covid_beds, covid_icu, covid_vent):
     return output
 
 def generate_vaccine_data_output(
+    most_recent_vaccine_data_date_formatted,
     day_vaccines_administered_total_count,
     fully_vaccinated_total_percentage,
     first_dose_percent_total_percentage,
@@ -375,7 +376,7 @@ def generate_vaccine_data_output(
     output = ""
     output += "### Vaccines \n"
     output += f"*Please note that the vaccine data source has changed from the IDPH to the CDC.*  \n\n"
-    output += f"**{day_vaccines_administered_total_count:,}** vaccine doses were administered since **{previous_data_date}**.\n\n"
+    output += f"As of **{most_recent_vaccine_data_date_formatted}**, **{day_vaccines_administered_total_count:,}** vaccine doses were administered since **{previous_data_date}**.\n\n"
     output += f"**{fully_vaccinated_total_percentage}%** of the total Illinois population are fully vaccinated, with **{first_dose_percent_total_percentage}%** having received their first dose.  \n**{booster_percent_total_percentage}%** have recieved a booster.  \n**{bivalent_booster_5plus_percentage}%** have recceived a bivalent booster. \n\n"
     output += f"**{fully_vaccinated_65plus_percentage}%** of population age 65+ are fully vaccinated, with **{first_dose_percent_65plus_percentage}%** having received their first dose.  **{booster_percent_65plus_percentage}%** have recieved a booster.  \n"
     output += f"**{fully_vaccinated_18plus_percentage}%** of population age 18+ are fully vaccinated, with **{first_dose_percent_18plus_percentage}%** having received their first dose.  **{booster_percent_18plus_percentage}%** have recieved a booster.  \n"
@@ -400,6 +401,7 @@ if hospitalization_data_available:
 
 if vaccine_data_available:
     selftext += generate_vaccine_data_output(
+        most_recent_vaccine_data_date_formatted = most_recent_vaccine_data_date_formatted,
         day_vaccines_administered_total_count = day_vaccines_administered_total,
         fully_vaccinated_total_percentage = fully_vaccinated_total,
         first_dose_percent_total_percentage = first_dose_percent_total,
@@ -515,6 +517,7 @@ def get_prior_day_output_data(prior_day_date):
 
     # if prior_day_vaccine_data_available:
     #     output += generate_vaccine_data_output(
+    # TODO: ADD NEW PARAM IF REUSED
     #         day_vaccines_administered_total_count = prior_day_day_vaccines_administered_total,
     #         fully_vaccinated_total_percentage = prior_day_fully_vaccinated_total,
     #         first_dose_percent_total_percentage = prior_day_first_dose_percent_total,
